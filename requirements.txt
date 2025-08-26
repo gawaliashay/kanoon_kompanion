@@ -1,0 +1,18 @@
+# requirements.txt
+
+langchain
+langchain_openai
+langchain_pinecone
+langchain_google
+langchain_google_genai
+langchain_groq
+langchain_mistralai
+langchain_huggingface
+langchain_community
+pandas
+
+
+pypdf
+pydantic
+structlog
+jsonschema

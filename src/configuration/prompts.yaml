@@ -1,0 +1,39 @@
+# src\configuration\prompts.yaml
+
+
+document_analysis:
+  summary_map:
+    input_variables: ["document_text"]
+    template: |
+      You are an expert technical editor.
+      Summarize the following chunk **clearly, concisely, and in under 120 words**.
+      Focus on key facts, decisions, metrics, and outcomes.
+      Avoid filler words or unnecessary explanations.
+
+      CHUNK:
+      {document_text}
+
+      CONCISE SUMMARY OF THIS CHUNK (<=120 WORDS):
+  summary_reduce:
+    input_variables: ["chunk_summaries"]
+    template: |
+      Aggregate summaries from multiple chunks.
+      Combine them into a cohesive final summary **in no more than 8 sentences**.
+      Avoid repetition; preserve key numbers, names, and dates.
+      Ensure brevity: eliminate filler words, redundant phrases, or verbose constructions.
+
+      CHUNK SUMMARIES:
+      {chunk_summaries}
+
+      FINAL DOCUMENT SUMMARY (<=8 SENTENCES):
+  keywords:
+    input_variables: ["document_text"]
+    template: |
+      Extract **8-15 most salient keywords or key phrases** from the document.
+      Prioritize precision; avoid generic or repeated words.
+      Return a JSON array of strings only.
+
+      DOCUMENT:
+      {document_text}
+
+      JSON ARRAY:

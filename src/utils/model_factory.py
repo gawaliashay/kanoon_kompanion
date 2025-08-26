@@ -8,7 +8,7 @@ from src.configuration.config_loader import config
 from src.utils.common_utils import timed
 
 
-class LLMFactory:
+class ModelFactory:
     """Factory to dynamically load LLMs and Embeddings using config.yaml."""
 
     def __init__(self, config_loader=config):

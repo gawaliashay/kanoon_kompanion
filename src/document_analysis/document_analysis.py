@@ -14,7 +14,7 @@ from src.utils.analysis_parsers import get_document_analysis_parser
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
-from src.utils.model_factory import LLMFactory
+from src.utils.model_factory import ModelFactory
 
 
 class DocumentAnalysisPipeline:
@@ -47,7 +47,7 @@ class DocumentAnalysisPipeline:
         )
 
         # LLM
-        factory = LLMFactory(config)
+        factory = ModelFactory(config)
         self.llm = factory.load_llm()
 
         # Build chain

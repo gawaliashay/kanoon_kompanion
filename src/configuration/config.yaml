@@ -1,5 +1,3 @@
-# src\configuration\config.yaml
-
 # =====================================
 # API KEYS
 # =====================================
@@ -10,8 +8,6 @@ api_keys:
   pinecone: ${PINECONE_API_KEY}
   huggingface: ${HUGGINGFACEHUB_API_TOKEN}
   google: ${GOOGLE_API_KEY}
-  # langchain usually doesn’t require a key, remove unless using LangSmith
-  # langchain: ${LANGCHAIN_API_KEY}
 
 # =====================================
 # PATHS
@@ -19,7 +15,10 @@ api_keys:
 paths:
   logs_dir: logs/
   cache_dir: cache/
-  data_dir: ${DATA_PATH}
+
+  analysis_dir: data/analysis
+  comparison_dir_a: data/comparison/set_a
+  comparison_dir_b: data/comparison/set_b
 
 # =====================================
 # LOGGING & MONITORING
@@ -58,6 +57,7 @@ preprocessing:
   normalize_spaces: true
   remove_special_chars: false
   remove_numeric: false
+
   supported_exts:
     - ".pdf"
     - ".docx"
@@ -70,6 +70,7 @@ preprocessing:
     - ".xlsx"
     - ".sqlite"
     - ".db"
+
   loader_map:
     .pdf: langchain_community.document_loaders.PyPDFLoader
     .docx: langchain_community.document_loaders.Docx2txtLoader
@@ -84,38 +85,30 @@ preprocessing:
     .db: langchain_community.document_loaders.SQLLoader
 
 # =====================================
-# DOCUMENT ANALYSIS
-# =====================================
-document_analysis:
-  default_prompt: summary_map
-  enabled: true
-  steps:
-    summary_map: true
-    summary_reduce: true
-    keywords: true
-  output_format: json
-
-# =====================================
 # TEXT SPLITTING CONFIGURATIONS
 # =====================================
 splitting_configs:
   default_strategy: recursive_character
+
   recursive_character:
-    chunk_size: 512
-    chunk_overlap: 32
+    chunk_size: 128
+    chunk_overlap: 16
     separators: ["\n\n", "\n", " ", ""]
     is_separator_regex: false
+
   character:
-    chunk_size: 512
-    chunk_overlap: 32
+    chunk_size: 128
+    chunk_overlap: 16
     separator: "\n\n"
+
   token:
-    chunk_size: 512
-    chunk_overlap: 32
+    chunk_size: 128
+    chunk_overlap: 16
     tokenizer_name: bert-base-uncased
+
   markdown:
-    chunk_size: 512
-    chunk_overlap: 32
+    chunk_size: 128
+    chunk_overlap: 16
 
 # =====================================
 # RETRIEVAL
@@ -145,11 +138,13 @@ models:
       dimensions: 384
       import_path: langchain_huggingface.HuggingFaceEmbeddings
       api_key: ${HUGGINGFACEHUB_API_TOKEN}
+
     openai:
       model_name: text-embedding-3-small
       dimensions: 1536
       import_path: langchain_openai.OpenAIEmbeddings
       api_key: ${OPENAI_API_KEY}
+
     google:
       model_name: models/embedding-001
       dimensions: 768
@@ -162,22 +157,57 @@ models:
       import_path: langchain_groq.ChatGroq
       api_key: ${GROQ_API_KEY}
       temperature: 0.3
-      max_tokens: 256
+      max_tokens: 128
+
     mistral:
       model_name: mistral-small
       import_path: langchain_mistralai.ChatMistralAI
       api_key: ${MISTRAL_API_KEY}
       temperature: 0.3
-      max_tokens: 256
+      max_tokens: 128
+
     openai:
       model_name: gpt-4o-mini
       import_path: langchain_openai.ChatOpenAI
       api_key: ${OPENAI_API_KEY}
       temperature: 0.7
-      max_tokens: 256
+      max_tokens: 128
+
     google:
       model_name: gemini-1.5-flash
       import_path: langchain_google_genai.ChatGoogleGenerativeAI
       api_key: ${GOOGLE_API_KEY}
       temperature: 0
-      max_tokens: 256
+      max_tokens: 128
+
+# =====================================
+# DOCUMENT ANALYSIS
+# =====================================
+document_analysis:
+  enabled: true
+  default_prompt: summary_map
+  steps:
+    summary_map: true
+    summary_reduce: true
+    keywords: true
+  output_format: json
+
+# =====================================
+# DOCUMENT COMPARISON
+# =====================================
+document_comparison:
+  enabled: true
+  default_prompt: compare_docs
+  steps:
+    compare_docs: true
+    chunk_reduce: true
+    holistic_compare: true
+  output_format: json
+
+  evaluation:
+    enabled: true
+    metrics:
+      - relevance
+      - consistency
+      - faithfulness
+    evaluator_llm: openai

@@ -1,4 +1,4 @@
-# src/utilities/analysis_parsers.py
+# src\document_analysis\analysis_parsers.py
 
 
 from typing import List
@@ -8,7 +8,8 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 class DocumentAnalysisResult(BaseModel):
     summary: str = Field(..., description="Concise summary of the document")
-    keywords: List[str] = Field(..., description="List of key terms")
+    # Uncomment if keywords are needed
+    # keywords: List[str] = Field(..., description="List of key terms")
 
 
 def get_document_analysis_parser() -> PydanticOutputParser:

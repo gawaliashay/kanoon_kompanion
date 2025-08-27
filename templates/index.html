@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Analysis Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .card {
+            background: #2d3748;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        .upload-section h2 {
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+        }
+
+        .upload-zone {
+            border: 3px dashed #4a5568;
+            border-radius: 15px;
+            padding: 3rem 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(45deg, #1a202c, #2d3748);
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #2d3748, #4a5568);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #2d3748, #4a5568);
+            transform: scale(1.02);
+        }
+
+        .upload-text {
+            color: #e2e8f0;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: #a0aec0;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #1a202c;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #e2e8f0;
+        }
+
+        .file-size {
+            color: #a0aec0;
+            font-size: 0.8rem;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: #e53e3e;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-file:hover {
+            background: #4a5568;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-section h2 {
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+        }
+
+        .status-card {
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+
+        .status-idle {
+            background: #1a202c;
+            border-color: #4a5568;
+        }
+
+        .status-analyzing {
+            background: #2d3748;
+            border-color: #f6ad55;
+        }
+
+        .status-success {
+            background: #1a2e1a;
+            border-color: #68d391;
+        }
+
+        .status-error {
+            background: #2d1b1b;
+            border-color: #fc8181;
+        }
+
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-message {
+            color: #a0aec0;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #4a5568;
+            border-radius: 4px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .results-section {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: #1a202c;
+            border-radius: 15px;
+            border: 1px solid #4a5568;
+        }
+
+        .results-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #e2e8f0;
+        }
+
+        .results-content {
+            background: #2d3748;
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid #4a5568;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #e2e8f0;
+        }
+
+        .health-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            color: white;
+            font-size: 0.9rem;
+            z-index: 1000;
+        }
+
+        .health-online {
+            background: #48bb78;
+        }
+
+        .health-offline {
+            background: #e53e3e;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        .spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="health-indicator" class="health-indicator health-offline">
+        API Offline
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Document Analysis Portal</h1>
+            <p>Advanced AI-powered document analysis and insights extraction</p>
+        </div>
+
+        <div class="main-content">
+            <div class="card upload-section">
+                <h2>Upload Documents</h2>
+                
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div id="upload-zone" class="upload-zone" onclick="document.getElementById('file-input').click()">
+                        <div class="upload-text">Drop files here or click to browse</div>
+                        <div class="upload-subtext">Supports PDF, DOCX, TXT and more</div>
+                    </div>
+                    
+                    <input type="file" id="file-input" class="file-input" multiple accept=".pdf,.docx,.txt,.doc" onchange="handleFiles(this.files)">
+                </form>
+                
+                <div id="file-list" class="file-list"></div>
+                
+                <button id="analyze-btn" class="analyze-btn" onclick="startAnalysis()" disabled>
+                    Start Analysis
+                </button>
+            </div>
+
+            <div class="card status-section">
+                <h2>Analysis Status</h2>
+                
+                <div id="status-card" class="status-card status-idle">
+                    <div class="status-title">
+                        Ready to Analyze
+                    </div>
+                    <div class="status-message">
+                        Upload documents and click "Start Analysis" to begin processing.
+                    </div>
+                </div>
+
+                <div id="results-section" class="results-section" style="display: none;">
+                    <div class="results-title">
+                        Analysis Results
+                    </div>
+                    <div id="results-content" class="results-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = window.location.origin;
+        
+        // DOM Elements
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const statusCard = document.getElementById('status-card');
+        const resultsSection = document.getElementById('results-section');
+        const resultsContent = document.getElementById('results-content');
+        const healthIndicator = document.getElementById('health-indicator');
+        const uploadForm = document.getElementById('upload-form');
+
+        // State
+        let uploadedFiles = [];
+        let isAnalyzing = false;
+
+        // Health Check
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    healthIndicator.className = 'health-indicator health-online';
+                    healthIndicator.textContent = 'API Online';
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                healthIndicator.className = 'health-indicator health-offline';
+                healthIndicator.textContent = 'API Offline';
+            }
+        }
+
+        // File Upload Handlers
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (!uploadedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    uploadedFiles.push(file);
+                }
+            });
+            updateFileList();
+            updateAnalyzeButton();
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <div>
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${formatFileSize(file.size)}</div>
+                        </div>
+                    </div>
+                    <button class="remove-file" onclick="removeFile(${index})">
+                        ×
+                    </button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+            updateAnalyzeButton();
+        }
+
+        function updateAnalyzeButton() {
+            analyzeBtn.disabled = uploadedFiles.length === 0 || isAnalyzing;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Status Updates
+        function updateStatus(type, title, message, showProgress = false) {
+            statusCard.className = `status-card status-${type}`;
+            
+            let icon = '';
+            switch (type) {
+                case 'analyzing':
+                    icon = '⏳ ';
+                    break;
+                case 'success':
+                    icon = '✅ ';
+                    break;
+                case 'error':
+                    icon = '❌ ';
+                    break;
+                default:
+                    icon = '⏰ ';
+            }
+
+            statusCard.innerHTML = `
+                <div class="status-title">
+                    ${icon}${title}
+                </div>
+                <div class="status-message">${message}</div>
+                ${showProgress ? '<div class="progress-bar"><div class="progress-fill" style="width: 100%"></div></div>' : ''}
+            `;
+        }
+
+        function showResults(result) {
+            resultsContent.textContent = JSON.stringify(result, null, 2);
+            resultsSection.style.display = 'block';
+        }
+
+        // Analysis Function
+        async function startAnalysis() {
+            if (uploadedFiles.length === 0 || isAnalyzing) return;
+
+            isAnalyzing = true;
+            updateAnalyzeButton();
+            updateStatus('analyzing', 'Processing Documents', 'Analyzing uploaded documents using AI pipeline...', true);
+            
+            // Update analyze button
+            analyzeBtn.textContent = 'Analyzing...';
+            analyzeBtn.disabled = true;
+
+            try {
+                // Create FormData and append all files
+                const formData = new FormData();
+                uploadedFiles.forEach(file => {
+                    formData.append('files', file);
+                });
+
+                // Send files directly to analyze endpoint
+                const response = await fetch(`${API_BASE_URL}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Analysis failed');
+                }
+
+                const result = await response.json();
+                
+                updateStatus('success', 'Analysis Complete', 'Document analysis completed successfully!');
+                showResults(result);
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                updateStatus('error', 'Analysis Failed', `Error: ${error.message}`);
+            } finally {
+                isAnalyzing = false;
+                updateAnalyzeButton();
+                analyzeBtn.textContent = 'Start Analysis';
+            }
+        }
+
+        // Initialize
+        checkHealth();
+        setInterval(checkHealth, 30000); // Check health every 30 seconds
+    </script>
+</body>
+</html>

@@ -1,11 +1,9 @@
-# src/document_analysis/document_ingestion.py
-
 from __future__ import annotations
 import os
 import sqlite3
 import importlib
 from pathlib import Path
-from typing import List, Iterable, Dict, Type
+from typing import List, Iterable, Dict, Type, Union
 
 import pandas as pd
 from langchain_core.documents import Document
@@ -63,7 +61,6 @@ class DocumentIngestor:
     @timed
     def load_directory(self, directory: str | Path | None = None) -> List[Document]:
         directory = Path(directory or self.input_dir)
-
         if not directory.exists():
             msg = f"Directory not found: {directory}"
             logger.error(msg)
@@ -107,7 +104,7 @@ class DocumentIngestor:
                 logger.error(msg)
                 raise CustomException(msg, ValueError(ext))
 
-            loader = loader_cls(file_path)  # assumes standard LC loaders signature
+            loader = loader_cls(file_path)  # standard LangChain loader signature
             docs: List[Document] = loader.load()
             return self._with_source(docs, file_path)
 
@@ -138,7 +135,7 @@ class DocumentIngestor:
                         metadata={
                             "source": self._norm_path(db_path),
                             "table": table,
-                            "rows": int(len(df)),
+                            "rows": len(df),
                         },
                     )
                 )

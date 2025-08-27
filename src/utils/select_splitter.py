@@ -11,6 +11,7 @@ from langchain.text_splitter import (
 from src.configuration.config_loader import config
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
+import inspect
 
 
 class ChunkingUtility:
@@ -32,7 +33,6 @@ class ChunkingUtility:
             if not splitter_cls:
                 raise ValueError(f"Unsupported chunking strategy: {self.strategy}")
 
-            # Init splitter with dynamic config
             self.splitter = splitter_cls(**self._filter_params(splitter_cls, self.cfg))
 
             logger.info(f"ChunkingUtility initialized. strategy={self.strategy}, cfg={self.cfg}")
@@ -42,7 +42,6 @@ class ChunkingUtility:
 
     def _filter_params(self, splitter_cls, cfg: Dict[str, Any]) -> Dict[str, Any]:
         """Filter config to only include params accepted by the splitter class."""
-        import inspect
         valid_params = inspect.signature(splitter_cls).parameters
         return {k: v for k, v in cfg.items() if k in valid_params}
 
@@ -52,17 +51,13 @@ class ChunkingUtility:
             if not documents:
                 logger.info("No documents to chunk (0).")
                 return []
+
             chunks = self.splitter.split_documents(documents)
-
-            # Add chunk metadata for traceability
             for i, chunk in enumerate(chunks):
-                chunk.metadata = {
-                    **chunk.metadata,
-                    "chunk_id": i,
-                    "chunk_strategy": self.strategy,
-                }
+                chunk.metadata = {**chunk.metadata, "chunk_id": i, "chunk_strategy": self.strategy}
 
-            logger.info(f"Chunking complete: {len(chunks)} chunks created from {len(documents)} docs")
+            logger.info(f"Chunking complete: {len(chunks)} chunks from {len(documents)} docs")
             return chunks
+
         except Exception as e:
             raise CustomException("Failed during document chunking", e)

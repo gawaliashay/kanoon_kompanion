@@ -1,12 +1,10 @@
-# src/document_analysis/document_preprocessing.py
-
 from __future__ import annotations
 from typing import List
 from langchain_core.documents import Document
 
 from src.configuration.config_loader import config
 from src.utils.preprocessing_utils import DocumentPreprocessor
-from src.utils.chunking_utils import ChunkingUtility
+from src.utils.select_splitter import ChunkingUtility
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.utils.common_utils import timed
@@ -23,11 +21,12 @@ class DocumentPreprocessingPipeline:
 
     @timed
     def run(self, documents: List[Document]) -> List[Document]:
-        try:
-            if not documents:
-                logger.info("No documents to preprocess (0).")
-                return []
+        """Preprocess and chunk documents."""
+        if not documents:
+            logger.info("No documents to preprocess (0).")
+            return []
 
+        try:
             # Step 1: Preprocess
             cleaned_docs = self.preprocessor.transform_documents(documents)
             logger.info(f"Documents preprocessed successfully. count={len(cleaned_docs)}")
@@ -37,6 +36,7 @@ class DocumentPreprocessingPipeline:
             logger.info(f"Documents chunked successfully. chunks={len(chunked_docs)}")
 
             return chunked_docs
+
         except Exception as e:
             logger.error(f"Document preprocessing pipeline failed: {e}")
             raise CustomException("Document preprocessing pipeline failed", e)

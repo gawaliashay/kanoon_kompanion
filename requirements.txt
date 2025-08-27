@@ -15,4 +15,9 @@ pandas
 pypdf
 pydantic
 structlog
-jsonschema
+jsonschema 
+
+fastapi
+uvicorn
+jinja2
+python-multipart

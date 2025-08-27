@@ -1,4 +1,4 @@
-# src\utilities\rag_utils.py
+# src/utils/rag_utils.py
 
 from typing import List, Any
 import importlib
@@ -6,37 +6,36 @@ from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
     CharacterTextSplitter,
     TokenTextSplitter,
-    MarkdownTextSplitter
+    MarkdownTextSplitter,
 )
-
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
-from src.configuration.config_loader import ConfigLoader
+from src.configuration.config_loader import config
 from src.utils.common_utils import timed
 
 
 class RAGUtils:
     """Utilities for text splitting, vectorstore loading, and retrieval."""
 
-    def __init__(self, config: ConfigLoader):
-        self.config = config
+    SPLITTER_MAP = {
+        "recursive_character": RecursiveCharacterTextSplitter,
+        "character": CharacterTextSplitter,
+        "token": TokenTextSplitter,
+        "markdown": MarkdownTextSplitter,
+    }
+
+    def __init__(self, config_loader=config):
+        self.config = config_loader
 
     @timed
     def get_text_splitter(self, strategy: str = None) -> Any:
         try:
-            splitter_cfg = self.config.get_splitter_config(strategy)
             strategy = strategy or self.config.get("splitting_configs.default_strategy")
-
-            if strategy == "recursive_character":
-                return RecursiveCharacterTextSplitter(**splitter_cfg)
-            elif strategy == "character":
-                return CharacterTextSplitter(**splitter_cfg)
-            elif strategy == "token":
-                return TokenTextSplitter(**splitter_cfg)
-            elif strategy == "markdown":
-                return MarkdownTextSplitter(**splitter_cfg)
-            else:
+            splitter_cfg = self.config.get_splitter_config(strategy)
+            splitter_cls = self.SPLITTER_MAP.get(strategy)
+            if not splitter_cls:
                 raise ValueError(f"Unknown text splitter strategy: {strategy}")
+            return splitter_cls(**splitter_cfg)
         except Exception as e:
             raise CustomException("Failed to initialize text splitter", e)
 
@@ -64,4 +63,3 @@ class RAGUtils:
             return vectorstore.as_retriever(search_type=search_type, search_kwargs={"k": top_k})
         except Exception as e:
             raise CustomException("Failed to get retriever", e)
-

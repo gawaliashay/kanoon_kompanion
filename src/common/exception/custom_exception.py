@@ -1,103 +1,120 @@
+import os
 import sys
-import traceback
-from typing import Optional, Any, Dict
+import logging
+from typing import Optional, Any, Dict, Tuple
 from src.common.logging.logger import logger
 
 
 class CustomException(Exception):
     """
-    A structured, production-grade custom exception class.
-    Logs enriched error details, context, and traceback information.
+    Structured custom exception that logs a single, clean JSON entry.
     """
 
     def __init__(
         self,
         error_message: str,
         error_details: Optional[Any] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        include_traceback: Optional[bool] = None,
+        log_level: int = logging.ERROR,
     ):
-        # Normalize message
         self.error_message = str(error_message)
-
-        # Resolve exc_info (prefer provided details, else sys.exc_info())
-        exc_type, exc_value, exc_tb = self._get_exception_info(error_details)
-
-        # Extract error location (file + line)
-        self.file_name, self.lineno = self._get_error_location(exc_tb)
         self.context = context or {}
+        self.log_level = log_level
 
-        # Structured traceback (list instead of raw multiline string)
-        if exc_type and exc_tb:
-            self.traceback_list = traceback.format_exception(exc_type, exc_value, exc_tb)
-        else:
-            self.traceback_list = []
+        # Get exception info
+        self.exc_type, self.exc_value, self.exc_tb = self._get_exception_info(error_details)
+        self.root_cause = self.exc_type.__name__ if self.exc_type else "UnknownError"
+        self.cause_message = str(self.exc_value) if self.exc_value else None
 
-        # Log immediately on creation
+        # Get error location
+        self.file_name, self.lineno, self.func_name = self._get_error_location(self.exc_tb)
+
+        # Traceback handling
+        trace_env = os.getenv("LOG_FULL_TRACEBACK", "0") == "1"
+        include_full = include_traceback if include_traceback is not None else trace_env
+        self.traceback = self._format_traceback(self.exc_tb) if include_full and self.exc_tb else None
+
+        # Log only once
         self._log_exception()
 
-        super().__init__(self.__str__())
+        super().__init__(self.error_message)
 
-    def _get_exception_info(self, error_details: Optional[Any]):
-        """Extract exception info from error_details or fallback to sys.exc_info()."""
+    def _get_exception_info(self, error_details: Optional[Any]) -> Tuple:
+        """Return (exc_type, exc_value, exc_tb)."""
         if error_details is None:
             return sys.exc_info()
-        elif isinstance(error_details, BaseException):
+        if isinstance(error_details, BaseException):
             return type(error_details), error_details, error_details.__traceback__
-        return sys.exc_info()
+        if isinstance(error_details, tuple) and len(error_details) == 3:
+            return error_details
+        return None, None, None
 
     def _get_error_location(self, exc_tb):
-        """Find the most relevant traceback location."""
+        """Return filename, lineno, func_name for the error location."""
         if not exc_tb:
-            return "<unknown>", -1
+            # Try to get current frame if no traceback
+            try:
+                frame = sys._getframe(2)  # Skip exception init frames
+                return frame.f_code.co_filename, frame.f_lineno, frame.f_code.co_name
+            except:
+                return "<unknown>", -1, "<unknown>"
+        
+        # Get the frame where the error actually occurred
+        tb = exc_tb
+        while tb.tb_next:
+            tb = tb.tb_next
+        frame = tb.tb_frame
+        return frame.f_code.co_filename, tb.tb_lineno, frame.f_code.co_name
 
-        last_tb = exc_tb
-        while last_tb and last_tb.tb_next:
-            last_tb = last_tb.tb_next
-
-        return (
-            last_tb.tb_frame.f_code.co_filename if last_tb else "<unknown>",
-            last_tb.tb_lineno if last_tb else -1
-        )
+    def _format_traceback(self, exc_tb):
+        """Return simplified traceback."""
+        frames = []
+        tb = exc_tb
+        max_frames = 10  # Limit traceback length
+        
+        while tb and len(frames) < max_frames:
+            f = tb.tb_frame
+            frames.append({
+                "file": os.path.basename(f.f_code.co_filename),  # Just filename, not full path
+                "line": tb.tb_lineno,
+                "function": f.f_code.co_name
+            })
+            tb = tb.tb_next
+        
+        return frames
 
     def _log_exception(self):
-        """Log the exception with structured context."""
-        log_context = {
-            "file": self.file_name,
-            "line": self.lineno,
-            "error_message": self.error_message,
-            "traceback": self.traceback_list,
-            **self.context
+        """Emit a single clean structured log entry."""
+        # Base payload - use 'event' for the main message
+        payload = {
+            'event': self.error_message,
+            'error_type': self.root_cause,
+            'location': f"{os.path.basename(self.file_name)}:{self.lineno}:{self.func_name}",
         }
 
-        logger.error("CustomException occurred", **log_context)
+        # Add context if available
+        if self.context:
+            payload.update(self.context)  # Merge context into main payload
+        
+        # Add cause if different from main message
+        if self.cause_message and self.cause_message != self.error_message:
+            payload['cause'] = self.cause_message
+        
+        # Add traceback only if explicitly enabled
+        if self.traceback:
+            payload['traceback'] = self.traceback
+
+        # Log at appropriate level
+        if self.log_level >= logging.ERROR:
+            logger.error(**payload)
+        elif self.log_level >= logging.WARNING:
+            logger.warning(**payload)
+        else:
+            logger.info(**payload)
 
     def __str__(self):
-        return f"Error in [{self.file_name}] at line [{self.lineno}] | Message: {self.error_message}"
+        return f"{self.error_message} ({self.root_cause}) at {os.path.basename(self.file_name)}:{self.lineno}"
 
     def __repr__(self):
-        return (
-            f"CustomException(file={self.file_name!r}, "
-            f"line={self.lineno}, message={self.error_message!r})"
-        )
-
-
-# --- Example usage ---
-if __name__ == "__main__":
-    try:
-        a = 1 / 0
-    except Exception as e:
-        raise CustomException(
-            "Division failed",
-            e,
-            {"operation": "division", "dividend": 1, "divisor": 0}
-        )
-
-    try:
-        file_path = "nonexistent.txt"
-        open(file_path)
-    except Exception as e:
-        raise CustomException(
-            "File operation failed",
-            e,
-            {"file_path": file_path, "user_id": 123, "action": "file_open"}
-        )
+        return f"CustomException({self.root_cause}: {self.error_message})"

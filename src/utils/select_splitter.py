@@ -1,4 +1,4 @@
-# src/utils/chunking_utils.py
+# src/utils/select_splitter.py
 
 from typing import List, Dict, Any
 from langchain_core.documents import Document
@@ -29,10 +29,15 @@ class ChunkingUtility:
             self.strategy = strategy or config.get("splitting_configs.default_strategy")
             self.cfg: Dict[str, Any] = config.get_splitter_config(self.strategy) or {}
 
-            splitter_cls = self.SPLITTER_MAP.get(self.strategy)
-            if not splitter_cls:
-                raise ValueError(f"Unsupported chunking strategy: {self.strategy}")
+            # Ensure safe separators
+            if "separators" in self.cfg and "" in self.cfg["separators"]:
+                self.cfg["separators"] = [s for s in self.cfg["separators"] if s != ""]
 
+            # Reduce chunk size if needed
+            if "chunk_size" in self.cfg and self.cfg["chunk_size"] > 1024:
+                self.cfg["chunk_size"] = 1024
+
+            splitter_cls = self.SPLITTER_MAP.get(self.strategy)
             self.splitter = splitter_cls(**self._filter_params(splitter_cls, self.cfg))
 
             logger.info(f"ChunkingUtility initialized. strategy={self.strategy}, cfg={self.cfg}")

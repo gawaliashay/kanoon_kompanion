@@ -1,3 +1,5 @@
+# src/configuration/prompts.yaml
+
 # =====================================
 # DOCUMENT ANALYSIS PROMPTS
 # =====================================
@@ -9,9 +11,9 @@ document_analysis:
       Summarize the following chunk **clearly, concisely, and in under 120 words**.
       Focus on key facts, decisions, metrics, and outcomes.
       Return JSON strictly:
-      {
+      {{
         "summary": "<your summary here>"
-      }
+      }}
 
       CHUNK:
       {document_text}
@@ -27,9 +29,9 @@ document_analysis:
       - Outcomes
       Avoid repetition and minor details.
       Return JSON strictly:
-      {
+      {{
         "summary": "<final document summary>"
-      }
+      }}
 
       CHUNK SUMMARIES:
       {chunk_summaries}
@@ -39,12 +41,13 @@ document_analysis:
     template: |
       Extract **8–15 most salient keywords or key phrases** from the document.
       Prioritize precision; avoid generic or repeated words.
-      Return a JSON array of strings only.
+      Return JSON strictly:
+      {{
+        "keywords": []
+      }}
 
       DOCUMENT:
       {document_text}
-
-      JSON ARRAY:
 
 # =====================================
 # DOCUMENT COMPARISON PROMPTS
@@ -79,7 +82,6 @@ document_comparison:
 
       REDUCED SUMMARY:
 
-
   holistic_compare:
     input_variables: ["doc1_text", "doc2_text"]
     template: |
@@ -90,7 +92,7 @@ document_comparison:
       - Critical unique points
       - Potential conflicts or contradictions
       Return JSON strictly:
-      { "similarities": [], "differences": [], "unique_doc1": [], "unique_doc2": [] }
+      {{ "similarities": [], "differences": [], "unique_doc1": [], "unique_doc2": [] }}
 
       DOCUMENT 1:
       {doc1_text}

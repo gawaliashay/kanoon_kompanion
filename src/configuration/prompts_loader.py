@@ -1,3 +1,5 @@
+# src\configuration\prompts_loader.py
+
 import yaml
 from pathlib import Path
 from typing import Dict, Any, List
@@ -71,7 +73,7 @@ class PromptsLoader:
 
 
 # Instantiate at import
-try:
-    prompts = PromptsLoader()
-except CustomException:
-    prompts = None  # Safe fallback if initialization fails
+# try:
+#     prompts = PromptsLoader()
+# except CustomException:
+#     prompts = None  # Safe fallback if initialization fails

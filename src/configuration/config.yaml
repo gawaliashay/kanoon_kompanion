@@ -1,3 +1,5 @@
+# src\configuration\config.yaml
+
 # =====================================
 # API KEYS
 # =====================================
@@ -91,24 +93,25 @@ splitting_configs:
   default_strategy: recursive_character
 
   recursive_character:
-    chunk_size: 128
-    chunk_overlap: 16
-    separators: ["\n\n", "\n", " ", ""]
+    chunk_size: 1024           # max characters per chunk
+    chunk_overlap: 30          # overlap between chunks
+    separators: ["\n\n", "\n", " "]  # safe, no empty string
     is_separator_regex: false
 
   character:
-    chunk_size: 128
-    chunk_overlap: 16
+    chunk_size: 1024
+    chunk_overlap: 30
     separator: "\n\n"
 
   token:
-    chunk_size: 128
-    chunk_overlap: 16
+    chunk_size: 512            # smaller chunk size for token-based splitting
+    chunk_overlap: 50
     tokenizer_name: bert-base-uncased
 
   markdown:
-    chunk_size: 128
-    chunk_overlap: 16
+    chunk_size: 1024
+    chunk_overlap: 30
+
 
 # =====================================
 # RETRIEVAL
@@ -186,11 +189,17 @@ models:
 document_analysis:
   enabled: true
   default_prompt: summary_map
+  batch_size: 10
+  chunk_fallback_length: 500
+
   steps:
     summary_map: true
     summary_reduce: true
-    keywords: true
+    keywords: false   # set to false to disable keyword extraction
+
   output_format: json
+
+
 
 # =====================================
 # DOCUMENT COMPARISON

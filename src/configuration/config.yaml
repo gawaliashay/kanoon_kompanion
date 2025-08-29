@@ -93,24 +93,29 @@ splitting_configs:
   default_strategy: recursive_character
 
   recursive_character:
-    chunk_size: 1024           # max characters per chunk
-    chunk_overlap: 30          # overlap between chunks
-    separators: ["\n\n", "\n", " "]  # safe, no empty string
+    import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
+    chunk_size: 1024
+    chunk_overlap: 30
+    separators: ["\n\n", "\n", " "]
     is_separator_regex: false
 
   character:
+    import_path: langchain.text_splitter.CharacterTextSplitter
     chunk_size: 1024
     chunk_overlap: 30
     separator: "\n\n"
 
   token:
-    chunk_size: 512            # smaller chunk size for token-based splitting
+    import_path: langchain.text_splitter.TokenTextSplitter
+    chunk_size: 512
     chunk_overlap: 50
     tokenizer_name: bert-base-uncased
 
   markdown:
+    import_path: langchain.text_splitter.MarkdownTextSplitter
     chunk_size: 1024
     chunk_overlap: 30
+
 
 
 # =====================================
@@ -194,11 +199,9 @@ document_analysis:
 
   steps:
     summary_map: true
-    summary_reduce: true
-    keywords: false   # set to false to disable keyword extraction
+    summary_reduce: true   # keywords removed
 
   output_format: json
-
 
 
 # =====================================

@@ -1,5 +1,3 @@
-# src\configuration\prompts_loader.py
-
 import yaml
 from pathlib import Path
 from typing import Dict, Any, List
@@ -38,7 +36,7 @@ class PromptsLoader:
     # --------------------------
     # Accessors
     # --------------------------
-    def get_prompt(self, section: str, name: str) -> Dict[str, Any]:
+    def _get_prompt(self, section: str, name: str) -> Dict[str, Any]:
         try:
             return self.prompts.get(section, {}).get(name, {})
         except Exception as e:
@@ -46,34 +44,9 @@ class PromptsLoader:
             raise CustomException(f"Error fetching prompt [{section}.{name}]", e)
 
     def get_analysis_prompt(self, name: str = "summary_map") -> Dict[str, Any]:
-        return self.get_prompt("document_analysis", name)
+        """Fetch a document analysis prompt (map or reduce)."""
+        return self._get_prompt("document_analysis", name)
 
     def get_comparison_prompt(self, name: str = "compare_docs") -> Dict[str, Any]:
-        return self.get_prompt("document_comparison", name)
-
-    def get_available_prompts(self, section: str) -> List[str]:
-        try:
-            return list(self.prompts.get(section, {}).keys())
-        except Exception as e:
-            logger.error(f"Error listing prompts for section {section}: {e}")
-            raise CustomException(f"Error listing prompts for section {section}", e)
-
-    # --------------------------
-    # Reload (Hot-swap prompts)
-    # --------------------------
-    def reload(self, new_prompts_path: str = None):
-        try:
-            if new_prompts_path:
-                self.prompts_path = Path(new_prompts_path)
-            self._load_prompts()
-            logger.info(f"Prompts reloaded successfully from {self.prompts_path}")
-        except Exception as e:
-            logger.error(f"Error reloading prompts: {e}")
-            raise CustomException("Failed to reload prompts", e)
-
-
-# Instantiate at import
-# try:
-#     prompts = PromptsLoader()
-# except CustomException:
-#     prompts = None  # Safe fallback if initialization fails
+        """Fetch a document comparison prompt."""
+        return self._get_prompt("document_comparison", name)

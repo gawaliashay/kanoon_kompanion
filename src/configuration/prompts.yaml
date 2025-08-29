@@ -36,19 +36,6 @@ document_analysis:
       CHUNK SUMMARIES:
       {chunk_summaries}
 
-  keywords:
-    input_variables: ["document_text"]
-    template: |
-      Extract **8–15 most salient keywords or key phrases** from the document.
-      Prioritize precision; avoid generic or repeated words.
-      Return JSON strictly:
-      {{
-        "keywords": []
-      }}
-
-      DOCUMENT:
-      {document_text}
-
 # =====================================
 # DOCUMENT COMPARISON PROMPTS
 # =====================================

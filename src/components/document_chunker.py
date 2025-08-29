@@ -1,13 +1,7 @@
-# src/utils/select_splitter.py
+# src\components\document_chunker.py
 
 from typing import List, Dict, Any
 from langchain_core.documents import Document
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
-    TokenTextSplitter,
-    MarkdownTextSplitter,
-)
 from src.configuration.config_loader import config
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
@@ -16,13 +10,6 @@ import inspect
 
 class ChunkingUtility:
     """Config-driven universal document chunker."""
-
-    SPLITTER_MAP = {
-        "recursive_character": RecursiveCharacterTextSplitter,
-        "character": CharacterTextSplitter,
-        "token": TokenTextSplitter,
-        "markdown": MarkdownTextSplitter,
-    }
 
     def __init__(self, strategy: str | None = None):
         try:
@@ -33,11 +20,11 @@ class ChunkingUtility:
             if "separators" in self.cfg and "" in self.cfg["separators"]:
                 self.cfg["separators"] = [s for s in self.cfg["separators"] if s != ""]
 
-            # Reduce chunk size if needed
+            # Enforce max chunk size
             if "chunk_size" in self.cfg and self.cfg["chunk_size"] > 1024:
                 self.cfg["chunk_size"] = 1024
 
-            splitter_cls = self.SPLITTER_MAP.get(self.strategy)
+            splitter_cls = self.cfg["class"]
             self.splitter = splitter_cls(**self._filter_params(splitter_cls, self.cfg))
 
             logger.info(f"ChunkingUtility initialized. strategy={self.strategy}, cfg={self.cfg}")

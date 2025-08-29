@@ -3,7 +3,7 @@
 
 import argparse
 from typing import Dict
-from src.document_comparison.document_comparison_pipeline import DocumentComparisonPipeline
+from src.components.document_comparison.document_comparison_pipeline import DocumentComparisonPipeline
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config

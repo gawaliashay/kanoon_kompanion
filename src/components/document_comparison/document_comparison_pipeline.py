@@ -8,13 +8,13 @@ import argparse
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
 
-from src.document_comparison.document_ingestion import ComparisonDocumentIngestor
-from src.document_comparison.document_preprocessing import ComparisonPreprocessingPipeline
-from src.document_comparison.comparison_parsers import get_document_comparison_parser
+from src.components.document_comparison.document_ingestion import ComparisonDocumentIngestor
+from src.components.document_comparison.document_preprocessing import ComparisonPreprocessingPipeline
+from src.components.document_comparison.comparison_parsers import get_document_comparison_parser
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
-from src.utils.select_model import ModelFactory
+from src.components.model_loader import ModelFactory
 from src.utils.common_utils import timed
 
 

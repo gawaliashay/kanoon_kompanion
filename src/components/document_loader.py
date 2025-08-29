@@ -1,4 +1,4 @@
-# src\common\ingestion\document_ingestor.py
+# src\components\document_loader.py
 
 from __future__ import annotations
 import os

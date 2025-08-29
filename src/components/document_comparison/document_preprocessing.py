@@ -5,7 +5,7 @@ from typing import List, Tuple
 from langchain_core.documents import Document
 from src.configuration.config_loader import config
 from src.utils.preprocessing_utils import DocumentPreprocessor
-from src.utils.select_splitter import ChunkingUtility
+from src.components.document_chunker import ChunkingUtility
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.utils.common_utils import timed

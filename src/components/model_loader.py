@@ -1,4 +1,4 @@
-# src/utils/select_model.py
+# src\components\model_loader.py
 
 import importlib
 from typing import Any, Dict

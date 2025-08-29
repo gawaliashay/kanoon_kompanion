@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import List, Tuple, Union
 from langchain_core.documents import Document
-from src.common.ingestion.document_ingestor import DocumentIngestor
+from src.components.document_loader import DocumentIngestor
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 

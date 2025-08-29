@@ -1,13 +1,7 @@
-# src/utils/rag_utils.py
+# src\components\rag_utils.py
 
 from typing import List, Any
 import importlib
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
-    TokenTextSplitter,
-    MarkdownTextSplitter,
-)
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
@@ -17,13 +11,6 @@ from src.utils.common_utils import timed
 class RAGUtils:
     """Utilities for text splitting, vectorstore loading, and retrieval."""
 
-    SPLITTER_MAP = {
-        "recursive_character": RecursiveCharacterTextSplitter,
-        "character": CharacterTextSplitter,
-        "token": TokenTextSplitter,
-        "markdown": MarkdownTextSplitter,
-    }
-
     def __init__(self, config_loader=config):
         self.config = config_loader
 
@@ -32,10 +19,9 @@ class RAGUtils:
         try:
             strategy = strategy or self.config.get("splitting_configs.default_strategy")
             splitter_cfg = self.config.get_splitter_config(strategy)
-            splitter_cls = self.SPLITTER_MAP.get(strategy)
-            if not splitter_cls:
-                raise ValueError(f"Unknown text splitter strategy: {strategy}")
-            return splitter_cls(**splitter_cfg)
+            splitter_cls = splitter_cfg["class"]
+            kwargs = {k: v for k, v in splitter_cfg.items() if k != "class"}
+            return splitter_cls(**kwargs)
         except Exception as e:
             raise CustomException("Failed to initialize text splitter", e)
 

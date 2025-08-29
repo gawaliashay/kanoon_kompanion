@@ -1,7 +1,7 @@
 # main_analysis.py
 
 from typing import List
-from src.document_analysis.document_analysis_pipeline import DocumentAnalysisPipeline
+from src.components.document_analysis.document_analysis_pipeline import DocumentAnalysisPipeline
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config

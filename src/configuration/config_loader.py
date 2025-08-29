@@ -1,4 +1,4 @@
-# src/configuration/config_loader.py
+# src\configuration\config_loader.py
 
 import os
 import re
@@ -36,8 +36,7 @@ class ConfigSchema(BaseModel):
     preprocessing: Dict[str, Any] = Field(default_factory=dict)
     splitting_configs: Dict[str, Any] = Field(default_factory=dict)
     document_comparison: Dict[str, Any] = Field(default_factory=dict)
-    document_analysis: Dict[str, Any] = Field(default_factory=dict)   # 👈 add this
-
+    document_analysis: Dict[str, Any] = Field(default_factory=dict)   # ✅ still needed
 
 
 # --------------------------
@@ -201,10 +200,12 @@ class ConfigLoader:
     # Prompt Accessors
     # --------------------------
     def get_analysis_prompt(self, step: str | None = None):
+        """Fetch analysis prompt (summary_map or summary_reduce)."""
         prompts = self.prompts_loader.prompts.get("document_analysis", {})
         return prompts.get(step) if step else prompts
 
     def get_comparison_prompt(self, name: str = None):
+        """Fetch comparison prompt config."""
         return self.prompts_loader.get_comparison_prompt(
             name or self.get("document_comparison.default_prompt", "compare_docs")
         )

@@ -13,7 +13,7 @@ def main():
         logger.info("🚀 Starting Document Analysis Workflow")
 
         # Get input directory from config
-        input_dir: str = config.get("paths.analysis_dir", "data/analysis")
+        input_dir: str = config.get("paths.data_dir")
         logger.info(f"Using input directory: {input_dir}")
 
         # Initialize pipeline

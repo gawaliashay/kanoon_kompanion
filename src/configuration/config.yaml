@@ -18,7 +18,7 @@ paths:
   logs_dir: logs/
   cache_dir: cache/
 
-  analysis_dir: data/analysis
+  data_dir: data/analysis
   comparison_dir_a: data/comparison/set_a
   comparison_dir_b: data/comparison/set_b
 

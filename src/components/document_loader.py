@@ -20,7 +20,7 @@ class DocumentIngestor:
     """Production-grade ingestion with config-driven supported file types and dynamic loaders."""
 
     def __init__(self, input_dir: str | None = None):
-        self.input_dir = ensure_dir(input_dir or config.get("paths.data_dir", "data/uploads"))
+        self.input_dir = ensure_dir(input_dir or config.get("paths.data_dir"))
         self.supported_exts = set(config.get_supported_exts() or [])
         self.loader_map: Dict[str, str] = config.get_loader_map() or {}
         logger.info(f"DocumentIngestor initialized. input_dir={self.input_dir}")

@@ -18,6 +18,9 @@ from src.common.exception.custom_exception import CustomException
 # --------------------------
 
 class PathsConfig(BaseModel):
+    logs_dir: str = Field(default="logs/")
+    cache_dir: str = Field(default="cache/")
+    data_dir: str = Field(default="data/analysis")
     comparison_dir_a: str = Field(default="data/comparison/set_a")
     comparison_dir_b: str = Field(default="data/comparison/set_b")
 

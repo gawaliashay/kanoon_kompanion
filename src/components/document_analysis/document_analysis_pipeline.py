@@ -1,44 +1,47 @@
-# src\document_analysis\document_analysis_pipeline.py
-
+# src/document_analysis/document_analysis_pipeline.py
 
 from __future__ import annotations
-from typing import List, Dict, Any
-
+from pathlib import Path
+from typing import List, Dict, Any, Union
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
 
-from src.components.document_loader import DocumentIngestor
+from src.components.document_analysis.document_ingestion_analysis import DocumentAnalysisIngestor
 from src.components.document_analysis.document_preprocessing import DocumentPreprocessingPipeline
 from src.components.document_analysis.analysis_parsers import get_document_analysis_parser
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
+from src.configuration.prompts_loader import prompts
 from src.components.model_loader import ModelFactory
 
 
 class DocumentAnalysisPipeline:
-    """Config-driven document analysis pipeline (No RAG).
-    Always runs summary_map → summary_reduce steps.
-    """
+    """Config-driven document analysis pipeline (summary_map → summary_reduce)."""
 
     def __init__(self):
         try:
-            self.ingestor = DocumentIngestor()
+            # Ingest + preprocess
+            self.ingestor = DocumentAnalysisIngestor()
             self.preprocessor = DocumentPreprocessingPipeline()
             self.parser = get_document_analysis_parser()
+
+            # Load LLM from config
             factory = ModelFactory(config)
             self.llm = factory.load_llm()
             logger.info("DocumentAnalysisPipeline initialized successfully.")
+
         except Exception as e:
             logger.error(f"Failed to initialize DocumentAnalysisPipeline: {e}")
             raise CustomException("Pipeline initialization failed", e)
 
     def _build_chain(self, prompt_cfg: Dict[str, Any]) -> RunnableSequence:
+        """Create a runnable chain from a prompt config and LLM."""
         try:
             prompt = PromptTemplate(
                 input_variables=prompt_cfg["input_variables"],
                 partial_variables={"format_instructions": self.parser.get_format_instructions()},
-                template=prompt_cfg["template"]
+                template=prompt_cfg["template"],
             )
             return prompt | self.llm | self.parser
         except Exception as e:
@@ -46,13 +49,15 @@ class DocumentAnalysisPipeline:
             raise CustomException("Failed to build chain", e)
 
     def _batch_process(self, texts: List[str], step: str) -> List[str]:
-        """Run a step prompt (e.g., summary_map) across chunks in batches."""
+        """Run a prompt step (summary_map / summary_reduce) across chunks in batches."""
         results = []
-        prompt_cfg = config.get_analysis_prompt(step)
+
+        # Get prompt config from prompts_loader
+        prompt_cfg = prompts.get_analysis_prompt(step)
         if not prompt_cfg:
             raise CustomException(f"Prompt config '{step}' not found", ValueError(step))
-        chain = self._build_chain(prompt_cfg)
 
+        chain = self._build_chain(prompt_cfg)
         batch_size = config.get("document_analysis.batch_size", 10)
         fallback_len = config.get("document_analysis.chunk_fallback_length", 500)
 
@@ -64,15 +69,23 @@ class DocumentAnalysisPipeline:
                     results.append(result.dict()["summary"])
                 except Exception as e:
                     logger.warning(f"Step '{step}' failed on chunk: {e}")
-                    results.append(text[:fallback_len])
+                    results.append(text[:fallback_len])  # fallback
+
         return results
 
-    def run_analysis(self, file_paths: List[str]) -> Dict[str, Any]:
+    def run_analysis(
+        self, file_paths: List[Union[str, Path]] | None = None
+    ) -> Dict[str, Any]:
+        """Run full analysis pipeline: ingest → preprocess → summary_map → summary_reduce."""
         try:
-            logger.info(f"Starting document analysis. files={file_paths}")
-
             # ---- Ingest ----
-            docs = self.ingestor.load_paths(file_paths)
+            if file_paths:
+                logger.info(f"Starting document analysis for files: {file_paths}")
+                docs = self.ingestor.load_documents(file_paths)
+            else:
+                logger.info("Starting document analysis for default analysis directory")
+                docs = self.ingestor.load_documents()
+
             if not docs:
                 raise CustomException("No documents ingested", ValueError(file_paths))
 
@@ -84,10 +97,10 @@ class DocumentAnalysisPipeline:
             chunk_texts = [chunk.page_content for chunk in clean_docs]
             logger.info(f"Total chunks to analyze: {len(chunk_texts)}")
 
-            # ---- Mandatory Map Step ----
+            # ---- Map Step ----
             chunk_summaries = self._batch_process(chunk_texts, "summary_map")
 
-            # ---- Mandatory Reduce Step ----
+            # ---- Reduce Step ----
             combined = "\n\n".join(chunk_summaries)
             reduced = self._batch_process([combined], "summary_reduce")[0]
 

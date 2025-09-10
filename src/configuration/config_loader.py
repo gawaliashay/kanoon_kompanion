@@ -1,4 +1,4 @@
-# src\configuration\config_loader.py
+# src/configuration/config_loader.py
 
 import os
 import re
@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ValidationError
-from src.configuration.prompts_loader import PromptsLoader
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 
@@ -17,18 +16,17 @@ from src.common.exception.custom_exception import CustomException
 # Schema Definitions
 # --------------------------
 
-class PathsConfig(BaseModel):
-    logs_dir: str = Field(default="logs/")
-    cache_dir: str = Field(default="cache/")
-    data_dir: str = Field(default="data/analysis")
-    comparison_dir_a: str = Field(default="data/comparison/set_a")
-    comparison_dir_b: str = Field(default="data/comparison/set_b")
-
-
 class DefaultsConfig(BaseModel):
     llm: str
     embedding: str
 
+class PathsConfig(BaseModel):
+    logs_dir: str = Field(default="logs/")
+    cache_dir: str = Field(default="cache/")
+    analysis_dir: str = Field(default="data/analysis")   # match YAML
+    comparison_dir_a: str = Field(default="data/comparison/set_a")
+    comparison_dir_b: str = Field(default="data/comparison/set_b")
+    document_qa_chat_dir: str = Field(default="data/document_qa_chat")
 
 class ConfigSchema(BaseModel):
     api_keys: Dict[str, str] = Field(default_factory=dict)
@@ -39,8 +37,8 @@ class ConfigSchema(BaseModel):
     preprocessing: Dict[str, Any] = Field(default_factory=dict)
     splitting_configs: Dict[str, Any] = Field(default_factory=dict)
     document_comparison: Dict[str, Any] = Field(default_factory=dict)
-    document_analysis: Dict[str, Any] = Field(default_factory=dict)   # ✅ still needed
-
+    document_analysis: Dict[str, Any] = Field(default_factory=dict)
+    document_qa_chat: Dict[str, Any] = Field(default_factory=dict)
 
 # --------------------------
 # Config Loader
@@ -49,15 +47,9 @@ class ConfigSchema(BaseModel):
 class ConfigLoader:
     """Unified configuration loader with schema validation & defaults."""
 
-    def __init__(
-        self,
-        env_path: str = ".env",
-        config_path: str = "src/configuration/config.yaml",
-        prompts_path: str = "src/configuration/prompts.yaml"
-    ):
+    def __init__(self, env_path: str = ".env", config_path: str = "src/configuration/config.yaml"):
         self.env_path = Path(env_path)
         self.config_path = Path(config_path)
-        self.prompts_loader = PromptsLoader(prompts_path)
         self.config: ConfigSchema | None = None
 
         try:
@@ -71,17 +63,13 @@ class ConfigLoader:
     # Environment
     # --------------------------
     def _load_env(self):
-        try:
-            if self.env_path.exists():
-                load_dotenv(self.env_path)
-                logger.info(f".env loaded from {self.env_path}")
-            else:
-                logger.warning(f".env not found at {self.env_path}, using system env vars")
-        except Exception as e:
-            raise CustomException("Failed to load environment variables", e)
+        if self.env_path.exists():
+            load_dotenv(self.env_path)
+            logger.info(f".env loaded from {self.env_path}")
+        else:
+            logger.warning(f".env not found at {self.env_path}, using system env vars")
 
     def _resolve_env_vars(self, obj):
-        """Recursively resolve ${VAR} placeholders with environment variables."""
         if isinstance(obj, dict):
             return {k: self._resolve_env_vars(v) for k, v in obj.items()}
         if isinstance(obj, list):
@@ -100,7 +88,6 @@ class ConfigLoader:
     # Dynamic Imports
     # --------------------------
     def _resolve_imports(self, obj):
-        """Recursively import modules specified in config (via import_path)."""
         if isinstance(obj, dict):
             if "import_path" in obj and "class" not in obj:
                 try:
@@ -121,33 +108,28 @@ class ConfigLoader:
         if not self.config_path.exists():
             raise FileNotFoundError(f"Config file not found: {self.config_path}")
 
+        with open(self.config_path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+
+        # Merge env-specific override if exists
+        env = os.getenv("ENV", "dev")
+        override_path = self.config_path.with_name(f"config.{env}.yaml")
+        if override_path.exists():
+            with open(override_path, "r", encoding="utf-8") as f:
+                override = yaml.safe_load(f)
+            raw = self._merge_dicts(raw, override)
+
+        resolved = self._resolve_env_vars(raw)
+        imported = self._resolve_imports(resolved)
+
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                raw = yaml.safe_load(f)
-
-            # Merge env-specific override if exists
-            env = os.getenv("ENV", "dev")
-            override_path = self.config_path.with_name(f"config.{env}.yaml")
-            if override_path.exists():
-                with open(override_path, "r", encoding="utf-8") as f:
-                    override = yaml.safe_load(f)
-                raw = self._merge_dicts(raw, override)
-
-            resolved = self._resolve_env_vars(raw)
-            imported = self._resolve_imports(resolved)
-
-            # ✅ Validate against schema
             self.config = ConfigSchema(**imported)
             logger.info(f"Config validated and loaded successfully [{env}]")
-
         except ValidationError as ve:
             logger.error(f"Schema validation failed: {ve}")
             raise CustomException("Config validation failed", ve)
-        except Exception as e:
-            raise CustomException("Failed to load config.yaml", e)
 
     def _merge_dicts(self, base, override):
-        """Recursive merge with override priority."""
         for k, v in override.items():
             if isinstance(v, dict) and k in base:
                 base[k] = self._merge_dicts(base[k], v)
@@ -182,9 +164,7 @@ class ConfigLoader:
         return self.get("preprocessing.loader_map", {})
 
     def get_splitter_config(self, strategy: str = None):
-        return self.get(
-            f"splitting_configs.{strategy or self.get('splitting_configs.default_strategy')}", {}
-        )
+        return self.get(f"splitting_configs.{strategy or self.get('splitting_configs.default_strategy')}", {})
 
     def get_vectorstore_config(self, name: str = None):
         return self.get(f"vectorstores.{name or self.get('vectorstores.default')}", {})
@@ -198,21 +178,17 @@ class ConfigLoader:
     def get_document_comparison_strategies(self) -> List[str]:
         steps = self.get("document_comparison.steps", {})
         return [k for k, v in steps.items() if v]
-
+    
     # --------------------------
-    # Prompt Accessors
+    # Document QA Chat Accessors
     # --------------------------
-    def get_analysis_prompt(self, step: str | None = None):
-        """Fetch analysis prompt (summary_map or summary_reduce)."""
-        prompts = self.prompts_loader.prompts.get("document_analysis", {})
-        return prompts.get(step) if step else prompts
+    def get_document_qa_chat_dir(self) -> str:
+        return getattr(self.config.paths, "document_qa_chat_dir", None)
 
-    def get_comparison_prompt(self, name: str = None):
-        """Fetch comparison prompt config."""
-        return self.prompts_loader.get_comparison_prompt(
-            name or self.get("document_comparison.default_prompt", "compare_docs")
-        )
+    def get_document_qa_chat_steps(self) -> list[str]:
+        steps = self.get("document_qa_chat.steps", {})
+        return [k for k, v in steps.items() if v]
 
 
-# Instantiate at import
+# Instantiate config at import
 config = ConfigLoader()

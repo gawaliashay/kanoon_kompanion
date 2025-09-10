@@ -28,24 +28,36 @@ class RAGUtils:
     @timed
     def build_vectorstore(self, documents: List[Any], embedding: Any, name: str = None) -> Any:
         try:
-            vs_cfg = self.config.get_vectorstore_config(name)
+            vs_name = name or self.config.get("vectorstores.default")
+            vs_cfg = self.config.get_vectorstore_config(vs_name)
             module_path, class_name = vs_cfg["import_path"].rsplit(".", 1)
             module = importlib.import_module(module_path)
             cls = getattr(module, class_name)
 
-            kwargs = {k: v for k, v in vs_cfg.items() if k not in ["import_path", "class"]}
-            logger.info(f"Building vectorstore {name or self.config.get('vectorstores.default')}")
-            return cls.from_documents(documents=documents, embedding=embedding, **kwargs)
+            logger.info(f"Building vectorstore {vs_name}")
+
+            # Only pass what 'from_documents' supports for this vectorstore
+            if vs_name == "faiss":
+                # FAISS (community) does not take persist_directory in constructor
+                return cls.from_documents(documents=documents, embedding=embedding)
+            else:
+                # For other vectorstores, pass supported kwargs
+                valid_keys = {"persist_directory", "collection_name", "index_name"}
+                kwargs = {k: v for k, v in vs_cfg.items() if k in valid_keys}
+                return cls.from_documents(documents=documents, embedding=embedding, **kwargs)
+
         except Exception as e:
             raise CustomException("Failed to build vectorstore", e)
+
 
     @timed
     def get_retriever(self, vectorstore: Any) -> Any:
         try:
-            retr_cfg = self.config.get("retrieval")
+            retr_cfg = self.config.get("retrieval") or {}  # fallback if missing
             search_type = retr_cfg.get("search_type", "similarity")
             top_k = retr_cfg.get("similarity_top_k", 5)
             logger.info(f"Creating retriever with search_type={search_type}, top_k={top_k}")
             return vectorstore.as_retriever(search_type=search_type, search_kwargs={"k": top_k})
         except Exception as e:
             raise CustomException("Failed to get retriever", e)
+

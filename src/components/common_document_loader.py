@@ -1,4 +1,4 @@
-# src\components\document_loader.py
+# src/components/common_document_loader.py
 
 from __future__ import annotations
 import os
@@ -13,17 +13,25 @@ from langchain_core.documents import Document
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.utils.common_utils import ensure_dir, timed
-from src.configuration.config_loader import config
 
 
-class DocumentIngestor:
-    """Production-grade ingestion with config-driven supported file types and dynamic loaders."""
+class CommonDocumentLoader:
+    """
+    Generic document loader for various projects.
+    Handles files, directories, and SQLite/DB ingestion.
+    Dynamically loads appropriate loader classes based on file extension.
+    """
 
-    def __init__(self, input_dir: str | None = None):
-        self.input_dir = ensure_dir(input_dir or config.get("paths.data_dir"))
-        self.supported_exts = set(config.get_supported_exts() or [])
-        self.loader_map: Dict[str, str] = config.get_loader_map() or {}
-        logger.info(f"DocumentIngestor initialized. input_dir={self.input_dir}")
+    def __init__(
+        self,
+        input_dir: str | None = None,
+        supported_exts: set[str] | None = None,
+        loader_map: Dict[str, str] | None = None,
+    ):
+        self.input_dir = ensure_dir(input_dir) if input_dir else None
+        self.supported_exts = supported_exts or set()
+        self.loader_map = loader_map or {}
+        logger.info(f"CommonDocumentLoader initialized. input_dir={self.input_dir}")
         logger.info(f"Supported file types: {', '.join(sorted(self.supported_exts))}")
 
     @staticmethod
@@ -31,7 +39,9 @@ class DocumentIngestor:
         return str(Path(p).resolve())
 
     def _get_loader_class(self, ext: str) -> Type | None:
-        """Return a loader class from config's loader_map for the given extension."""
+        """
+        Return loader class for the given extension based on loader_map.
+        """
         import_path = self.loader_map.get(ext)
         if not import_path:
             return None
@@ -106,7 +116,7 @@ class DocumentIngestor:
                 logger.error(msg)
                 raise CustomException(msg, ValueError(ext))
 
-            loader = loader_cls(file_path)  # standard LangChain loader signature
+            loader = loader_cls(file_path)
             docs: List[Document] = loader.load()
             return self._with_source(docs, file_path)
 

@@ -18,9 +18,15 @@ paths:
   logs_dir: logs/
   cache_dir: cache/
 
-  data_dir: data/analysis
+  # analysis directory
+  analysis_dir: data/analysis
+
+  # comparison directory
   comparison_dir_a: data/comparison/set_a
   comparison_dir_b: data/comparison/set_b
+
+  # document qa chat directory
+  document_qa_chat_dir: data/document_qa_chat
 
 # =====================================
 # LOGGING & MONITORING
@@ -44,7 +50,7 @@ vectorstores:
   default: faiss
   faiss:
     import_path: langchain_community.vectorstores.FAISS
-    path: ${VECTOR_STORE_PATH}
+    persist_directory: data/faiss_store
   chroma:
     import_path: langchain_community.vectorstores.Chroma
   pinecone:
@@ -143,9 +149,9 @@ models:
   embeddings:
     huggingface:
       model_name: sentence-transformers/all-MiniLM-L6-v2
-      dimensions: 384
+      #dimensions: 384
       import_path: langchain_huggingface.HuggingFaceEmbeddings
-      api_key: ${HUGGINGFACEHUB_API_TOKEN}
+      #api_key: ${HUGGINGFACEHUB_API_TOKEN}
 
     openai:
       model_name: text-embedding-3-small
@@ -223,3 +229,18 @@ document_comparison:
       - consistency
       - faithfulness
     evaluator_llm: openai
+
+# =====================================
+# DOCUMENT QA CHAT
+# =====================================
+document_qa_chat:
+  enabled: true
+  default_prompt: contextualize_question_prompt
+  batch_size: 10
+  chunk_fallback_length: 500
+
+  steps:
+    contextualize_question_prompt: true
+    context_qa_prompt: true
+
+  output_format: json

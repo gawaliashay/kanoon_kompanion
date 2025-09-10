@@ -7,7 +7,7 @@ from typing import List
 import tempfile
 import os
 
-from src.document_analysis.document_analysis_pipeline import DocumentAnalysisPipeline
+from src.components.document_analysis.document_analysis_pipeline import DocumentAnalysisPipeline
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 

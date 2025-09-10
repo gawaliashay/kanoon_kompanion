@@ -1,5 +1,3 @@
-# src/configuration/prompts.yaml
-
 # =====================================
 # DOCUMENT ANALYSIS PROMPTS
 # =====================================
@@ -86,3 +84,29 @@ document_comparison:
 
       DOCUMENT 2:
       {doc2_text}
+
+# =====================================
+# DOCUMENT QA CHAT PROMPTS
+# =====================================
+document_qa_chat:
+  contextualize_question_prompt:
+    messages:
+      - role: system
+        content: |
+          Given a conversation history and the most recent user query, rewrite the query as a standalone question
+          that makes sense without relying on the previous context. Do not provide an answer—only reformulate the
+          question if necessary; otherwise, return it unchanged.
+      - role: human
+        content: "{input}"
+
+  context_qa_prompt:
+    messages:
+      - role: system
+        content: |
+          You are an assistant designed to answer questions using the provided context. Rely only on the retrieved
+          information to form your response. If the answer is not found in the context, respond with 'I don't know.'
+          Keep your answer concise and no longer than three sentences.
+
+          {context}
+      - role: human
+        content: "{input}"

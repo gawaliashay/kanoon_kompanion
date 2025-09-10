@@ -1,6 +1,8 @@
+# src/configuration/prompts_loader.py
+
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 
@@ -18,9 +20,6 @@ class PromptsLoader:
             logger.error(f"Failed to initialize PromptsLoader: {e}")
             raise CustomException("PromptsLoader initialization failed", e)
 
-    # --------------------------
-    # Internal Loader
-    # --------------------------
     def _load_prompts(self):
         if not self.prompts_path.exists():
             raise FileNotFoundError(f"Prompts file not found: {self.prompts_path}")
@@ -50,3 +49,11 @@ class PromptsLoader:
     def get_comparison_prompt(self, name: str = "compare_docs") -> Dict[str, Any]:
         """Fetch a document comparison prompt."""
         return self._get_prompt("document_comparison", name)
+    
+    def get_qa_chat_prompt(self, name: str = "context_qa_prompt") -> Dict[str, Any]:
+        """Fetch a document QA chat prompt."""
+        return self._get_prompt("document_qa_chat", name)
+
+
+# Instantiate prompts at import
+prompts = PromptsLoader()

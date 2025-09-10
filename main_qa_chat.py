@@ -1,4 +1,4 @@
-# main.py
+# main_qa_chat.py
 
 import os
 import sys

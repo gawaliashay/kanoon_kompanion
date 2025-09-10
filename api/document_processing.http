@@ -1,0 +1,49 @@
+### 🚀 Welcome
+GET http://localhost:8000/
+
+### 📄 Document Analysis (upload multiple files)
+POST http://localhost:8000/document_analysis
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="files"; filename="report1.pdf"
+Content-Type: application/pdf
+
+< ./sample_docs/report1.pdf
+--boundary
+Content-Disposition: form-data; name="files"; filename="report2.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+< ./sample_docs/report2.docx
+--boundary--
+
+### 📊 Document Comparison (set A vs set B)
+POST http://localhost:8000/document_comparison
+Content-Type: multipart/form-data
+
+--boundary
+Content-Disposition: form-data; name="files_a"; filename="setA_doc1.pdf"
+Content-Type: application/pdf
+
+< ./sample_docs/setA_doc1.pdf
+--boundary
+Content-Disposition: form-data; name="files_b"; filename="setB_doc1.pdf"
+Content-Type: application/pdf
+
+< ./sample_docs/setB_doc1.pdf
+--boundary--
+
+### 💬 Document QA Chat (ask question)
+POST http://localhost:8000/document_qa_chat
+Content-Type: application/x-www-form-urlencoded
+
+question=What are the physical symptoms of anxiety?
+
+### 📂 Recent Files (for document analysis)
+GET http://localhost:8000/recent_files/document_analysis
+
+### 🗣 Conversation History (QA Chat)
+GET http://localhost:8000/conversation_history/document_qa_chat
+
+### 📥 Download File (last uploaded analysis file)
+GET http://localhost:8000/download_file/document_analysis/report1.pdf

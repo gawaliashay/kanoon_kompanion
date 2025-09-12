@@ -8,4 +8,4 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
 
     # Point to api.app
-    uvicorn.run("api.app:app", host=host, port=port, reload=True)
+    uvicorn.run("api.app:app", port=port, reload=True)

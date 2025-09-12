@@ -20,7 +20,7 @@ class ComparisonPreprocessingPipeline:
     def __init__(self):
         self.preproc_cfg = config.get("preprocessing", {}) or {}
         self.preprocessor = DocumentPreprocessor(self.preproc_cfg)
-        self.chunker = ChunkingUtility()
+        self.chunker = ChunkingUtility("document_comparison")
         logger.info(f"ComparisonPreprocessingPipeline initialized. preproc_cfg={self.preproc_cfg}")
 
     @timed

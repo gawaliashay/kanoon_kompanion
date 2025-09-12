@@ -1,54 +1,39 @@
-# src\components\document_chunker.py
+# src/components/document_chunker.py
 
-from typing import List, Dict, Any
+from typing import List
 from langchain_core.documents import Document
-from src.configuration.config_loader import config
+from src.components.rag_utils import RAGUtils
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
-import inspect
-
 
 class ChunkingUtility:
-    """Config-driven universal document chunker."""
+    """Universal document chunker, fully config-driven, wraps RAGUtils."""
 
-    def __init__(self, strategy: str | None = None):
+    def __init__(self, pipeline_name: str):
+        """
+        pipeline_name: 'document_analysis', 'document_comparison', 'document_qa_chat'
+        """
         try:
-            self.strategy = strategy or config.get("splitting_configs.default_strategy")
-            self.cfg: Dict[str, Any] = config.get_splitter_config(self.strategy) or {}
-
-            # Ensure safe separators
-            if "separators" in self.cfg and "" in self.cfg["separators"]:
-                self.cfg["separators"] = [s for s in self.cfg["separators"] if s != ""]
-
-            # Enforce max chunk size
-            if "chunk_size" in self.cfg and self.cfg["chunk_size"] > 1024:
-                self.cfg["chunk_size"] = 1024
-
-            splitter_cls = self.cfg["class"]
-            self.splitter = splitter_cls(**self._filter_params(splitter_cls, self.cfg))
-
-            logger.info(f"ChunkingUtility initialized. strategy={self.strategy}, cfg={self.cfg}")
-
+            self.pipeline_name = pipeline_name
+            self.rag = RAGUtils()
+            self.splitter = self.rag.get_text_splitter(pipeline_name=pipeline_name)
+            self.strategy = getattr(self.splitter, "chunk_strategy", pipeline_name)
+            logger.info(f"ChunkingUtility initialized for pipeline='{pipeline_name}', strategy='{self.strategy}'")
         except Exception as e:
             raise CustomException("Failed to initialize ChunkingUtility", e)
 
-    def _filter_params(self, splitter_cls, cfg: Dict[str, Any]) -> Dict[str, Any]:
-        """Filter config to only include params accepted by the splitter class."""
-        valid_params = inspect.signature(splitter_cls).parameters
-        return {k: v for k, v in cfg.items() if k in valid_params}
-
     def chunk_documents(self, documents: List[Document]) -> List[Document]:
-        """Split documents into chunks using the configured splitter."""
+        """Split documents into chunks using the configured splitter and add metadata."""
         try:
             if not documents:
-                logger.info("No documents to chunk (0).")
+                logger.info(f"No documents to chunk for pipeline '{self.pipeline_name}'")
                 return []
 
             chunks = self.splitter.split_documents(documents)
             for i, chunk in enumerate(chunks):
                 chunk.metadata = {**chunk.metadata, "chunk_id": i, "chunk_strategy": self.strategy}
 
-            logger.info(f"Chunking complete: {len(chunks)} chunks from {len(documents)} docs")
+            logger.info(f"Chunking complete: {len(chunks)} chunks from {len(documents)} docs for pipeline '{self.pipeline_name}'")
             return chunks
 
         except Exception as e:

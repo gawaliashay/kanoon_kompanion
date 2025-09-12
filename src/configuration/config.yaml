@@ -98,29 +98,66 @@ preprocessing:
 splitting_configs:
   default_strategy: recursive_character
 
+  # General recursive character splitter
   recursive_character:
     import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
     chunk_size: 1024
     chunk_overlap: 30
     separators: ["\n\n", "\n", " "]
+
+  # Document Analysis
+  analysis_strategy:
+    import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
+    chunk_size: 1024
+    chunk_overlap: 50
+    separators: ["\n\n", "\n", " "]
+
+  # Document Comparison
+  document_comparison:
+    import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
+    chunk_size: 600
+    chunk_overlap: 100
+    separators: ["\n\n", "\n", "•", ".", ";"]
     is_separator_regex: false
 
-  character:
-    import_path: langchain.text_splitter.CharacterTextSplitter
-    chunk_size: 1024
-    chunk_overlap: 30
-    separator: "\n\n"
-
-  token:
+  # Document QA Chat
+  qa_strategy:
     import_path: langchain.text_splitter.TokenTextSplitter
     chunk_size: 512
     chunk_overlap: 50
     tokenizer_name: bert-base-uncased
 
-  markdown:
-    import_path: langchain.text_splitter.MarkdownTextSplitter
-    chunk_size: 1024
-    chunk_overlap: 30
+# Mapping pipelines to their respective chunking strategies
+pipeline_chunking_map:
+  document_analysis: analysis_strategy
+  document_comparison: document_comparison
+  document_qa_chat: qa_strategy
+
+
+# splitters:
+#   recursive_character:
+#     import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
+#     chunk_size: 1024
+#     chunk_overlap: 50
+#     separators: ["\n\n", "\n", ".", " "]
+#     is_separator_regex: false
+
+#   character:
+#     import_path: langchain.text_splitter.CharacterTextSplitter
+#     chunk_size: 1024
+#     chunk_overlap: 30
+#     separator: "\n\n"
+
+#   token:
+#     import_path: langchain.text_splitter.TokenTextSplitter
+#     chunk_size: 512
+#     chunk_overlap: 50
+#     tokenizer_name: bert-base-uncased
+
+#   markdown:
+#     import_path: langchain.text_splitter.MarkdownTextSplitter
+#     chunk_size: 1024
+#     chunk_overlap: 30
 
 
 

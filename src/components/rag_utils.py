@@ -15,13 +15,29 @@ class RAGUtils:
         self.config = config_loader
 
     @timed
-    def get_text_splitter(self, strategy: str = None) -> Any:
+    def get_text_splitter(self, pipeline_name: str = None) -> Any:
+        """
+        Returns a text splitter configured per pipeline via config.yaml.
+        pipeline_name options: 'document_analysis', 'document_comparison', 'document_qa_chat'
+        """
         try:
-            strategy = strategy or self.config.get("splitting_configs.default_strategy")
+            # Fetch strategy from config loader
+            strategy = self.config.get_pipeline_chunking_strategy(pipeline_name)
+
+            # Fetch splitter config
             splitter_cfg = self.config.get_splitter_config(strategy)
-            splitter_cls = splitter_cfg["class"]
-            kwargs = {k: v for k, v in splitter_cfg.items() if k != "class"}
-            return splitter_cls(**kwargs)
+            module_path, class_name = splitter_cfg["import_path"].rsplit(".", 1)
+            module = importlib.import_module(module_path)
+            splitter_cls = getattr(module, class_name)
+
+            # Filter kwargs for constructor
+            valid_keys = {k for k in splitter_cfg.keys() if k not in ("import_path", "class")}
+            kwargs = {k: splitter_cfg[k] for k in valid_keys}
+
+            splitter = splitter_cls(**kwargs)
+            logger.info(f"Initialized text splitter for pipeline='{pipeline_name}', strategy='{strategy}'")
+            return splitter
+
         except Exception as e:
             raise CustomException("Failed to initialize text splitter", e)
 

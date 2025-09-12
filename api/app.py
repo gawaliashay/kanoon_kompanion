@@ -1,10 +1,22 @@
-from fastapi import FastAPI, UploadFile, File, Form, Request
-from fastapi.responses import JSONResponse
+# api\app.py
+
+from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from pathlib import Path
 import shutil
 import tempfile
+import os
+import uuid
+import json
+from datetime import datetime
+
+from src.common.logging.logger import logger
+from src.common.exception.custom_exception import CustomException
 
 # Pipelines
 from src.components.document_analysis.document_analysis_pipeline import DocumentAnalysisPipeline
@@ -12,12 +24,25 @@ from src.components.document_comparison.document_comparison_pipeline import Docu
 from src.components.document_qa_chat.document_qa_chat_pipeline import create_document_qa_chat_pipeline
 
 # Session manager
-from api.session_manager import save_uploaded_files, save_conversation, get_conversations
+from api.session_manager import save_uploaded_files, save_conversation, get_conversations, save_analysis_result, save_comparison_result
 
 # ----------------------------
 # Initialize FastAPI
 # ----------------------------
 app = FastAPI(title="Document Processing API", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files and templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # Pipelines
 analysis_pipeline = DocumentAnalysisPipeline()
@@ -39,8 +64,12 @@ class APIResponse(BaseModel):
 # ----------------------------
 # Welcome
 # ----------------------------
-@app.get("/", response_model=APIResponse, tags=["Welcome"])
-async def welcome():
+@app.get("/", response_class=HTMLResponse)
+async def welcome(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/api", response_model=APIResponse, tags=["Welcome"])
+async def api_welcome():
     return APIResponse(
         success=True,
         result={
@@ -58,13 +87,21 @@ async def welcome():
 # Document Analysis
 # ----------------------------
 @app.post("/document_analysis", response_model=APIResponse, tags=["Document Analysis"])
-async def document_analysis(files: List[UploadFile] = File(..., multiple=True)):
+async def document_analysis(files: List[UploadFile] = File(...)):
     try:
+        if not files:
+            raise HTTPException(status_code=400, detail="No files uploaded")
+        
         tmp_files = []
         for file in files:
-            tmp_path = Path(tempfile.gettempdir()) / file.filename
+            # Create unique filename to avoid conflicts
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            tmp_path = Path(tempfile.gettempdir()) / unique_filename
+            
+            # Read file content before it gets closed
+            content = await file.read()
             with tmp_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                buffer.write(content)
             tmp_files.append(tmp_path)
 
         session_dir = save_uploaded_files("document_analysis", tmp_files)
@@ -72,13 +109,21 @@ async def document_analysis(files: List[UploadFile] = File(..., multiple=True)):
 
         result = analysis_pipeline.run_analysis([str(f) for f in session_dir.iterdir() if f.is_file()])
 
+        # Save analysis result to session directory
+        session_number = int(session_dir.name.split("_")[1])
+        save_analysis_result("document_analysis", session_number, result, uploaded_files)
+
         return APIResponse(success=True, result={
             "session": str(session_dir),
             "uploaded_files": uploaded_files,
             "analysis": result
         })
     except Exception as e:
-        return JSONResponse(status_code=500, content=APIResponse(success=False, error=str(e)).dict())
+        logger.error(f"Document analysis error: {str(e)}")
+        return JSONResponse(
+            status_code=500, 
+            content=APIResponse(success=False, error=str(e)).dict()
+        )
 
 
 # ----------------------------
@@ -86,32 +131,50 @@ async def document_analysis(files: List[UploadFile] = File(..., multiple=True)):
 # ----------------------------
 @app.post("/document_comparison", response_model=APIResponse, tags=["Document Comparison"])
 async def document_comparison(
-    files_a: List[UploadFile] = File(..., multiple=True),
-    files_b: List[UploadFile] = File(..., multiple=True)
+    files_a: List[UploadFile] = File(...),
+    files_b: List[UploadFile] = File(...)
 ):
     try:
+        if not files_a or not files_b:
+            raise HTTPException(status_code=400, detail="Both file sets are required")
+        
         tmp_files_a, tmp_files_b = [], []
+        
+        # Process files_a
         for file in files_a:
-            tmp_path = Path(tempfile.gettempdir()) / file.filename
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            tmp_path = Path(tempfile.gettempdir()) / unique_filename
+            content = await file.read()
             with tmp_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                buffer.write(content)
             tmp_files_a.append(tmp_path)
 
+        # Process files_b
         for file in files_b:
-            tmp_path = Path(tempfile.gettempdir()) / file.filename
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            tmp_path = Path(tempfile.gettempdir()) / unique_filename
+            content = await file.read()
             with tmp_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                buffer.write(content)
             tmp_files_b.append(tmp_path)
 
-        session_dir = save_uploaded_files("document_comparison", [tmp_files_a, tmp_files_b], comparison=True)
+        session_dir = save_uploaded_files(
+            "document_comparison", 
+            tmp_files_a + tmp_files_b, 
+            comparison=True
+        )
 
-        doc1_files = [f.name for f in (session_dir / "doc1").glob("*")]
-        doc2_files = [f.name for f in (session_dir / "doc2").glob("*")]
+        doc1_files = [f.name for f in (session_dir / "doc1").iterdir() if f.is_file()]
+        doc2_files = [f.name for f in (session_dir / "doc2").iterdir() if f.is_file()]
 
         result = comparison_pipeline.run_comparison(
-            [str(f) for f in (session_dir / "doc1").glob("*")],
-            [str(f) for f in (session_dir / "doc2").glob("*")]
+            [str(f) for f in (session_dir / "doc1").iterdir() if f.is_file()],
+            [str(f) for f in (session_dir / "doc2").iterdir() if f.is_file()]
         )
+
+        # Save comparison result to session directory
+        session_number = int(session_dir.name.split("_")[1])
+        save_comparison_result("document_comparison", session_number, result, doc1_files, doc2_files)
 
         return APIResponse(success=True, result={
             "session": str(session_dir),
@@ -119,7 +182,11 @@ async def document_comparison(
             "comparison": result
         })
     except Exception as e:
-        return JSONResponse(status_code=500, content=APIResponse(success=False, error=str(e)).dict())
+        logger.error(f"Document comparison error: {str(e)}")
+        return JSONResponse(
+            status_code=500, 
+            content=APIResponse(success=False, error=str(e)).dict()
+        )
 
 
 # ----------------------------
@@ -129,7 +196,7 @@ async def document_comparison(
 async def document_qa_chat(
     request: Request,
     question: str = Form(...),
-    files: List[UploadFile] = File(None, multiple=True)
+    files: List[UploadFile] = File(None)
 ):
     """
     Upload documents (required for first request in a session).
@@ -139,14 +206,17 @@ async def document_qa_chat(
 
     try:
         uploaded_files = []
+        session_number = None
 
         # Start new session if files are uploaded
-        if files:
+        if files and len(files) > 0:
             tmp_files = []
             for file in files:
-                tmp_path = Path(tempfile.gettempdir()) / file.filename
+                unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+                tmp_path = Path(tempfile.gettempdir()) / unique_filename
+                content = await file.read()
                 with tmp_path.open("wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
+                    buffer.write(content)
                 tmp_files.append(tmp_path)
 
             session_dir = save_uploaded_files("document_qa_chat", tmp_files)
@@ -164,7 +234,7 @@ async def document_qa_chat(
             if session_number is None:
                 return JSONResponse(
                     status_code=400,
-                    content={"success": False, "error": "Please upload documents first."}
+                    content=APIResponse(success=False, error="Please upload documents first.").dict()
                 )
 
         # Query pipeline
@@ -185,4 +255,8 @@ async def document_qa_chat(
         })
 
     except Exception as e:
-        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+        logger.error(f"QA chat error: {str(e)}")
+        return JSONResponse(
+            status_code=500, 
+            content=APIResponse(success=False, error=str(e)).dict()
+        )

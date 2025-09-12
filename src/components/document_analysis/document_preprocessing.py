@@ -18,7 +18,7 @@ class DocumentPreprocessingPipeline:
     def __init__(self):
         self.preproc_cfg = config.get("preprocessing", {}) or {}
         self.preprocessor = DocumentPreprocessor(self.preproc_cfg)
-        self.chunker = ChunkingUtility()  # Config-driven chunker
+        self.chunker = ChunkingUtility("document_analysis")  # Config-driven chunker
         logger.info(f"DocumentPreprocessingPipeline initialized. preproc_cfg={self.preproc_cfg}")
 
     @timed

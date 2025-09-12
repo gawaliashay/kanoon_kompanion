@@ -38,7 +38,7 @@ class DocumentQAChatPipeline:
             # Initialize components
             self.ingestor = DocumentQAChatIngestor()
             self.preprocessor = DocumentQAPreprocessor()
-            self.chunker = ChunkingUtility()
+            self.chunker = ChunkingUtility("document_qa_chat")
             
             # Set up retriever (build if not provided)
             self.retriever = retriever

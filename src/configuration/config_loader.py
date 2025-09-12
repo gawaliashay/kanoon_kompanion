@@ -165,6 +165,19 @@ class ConfigLoader:
 
     def get_splitter_config(self, strategy: str = None):
         return self.get(f"splitting_configs.{strategy or self.get('splitting_configs.default_strategy')}", {})
+    
+    # --------------------------
+    # Pipeline-specific chunking
+    # --------------------------
+    def get_pipeline_chunking_strategy(self, pipeline_name: str) -> str:
+        """
+        Returns the chunking strategy configured for a specific pipeline.
+        If no mapping exists, falls back to default_strategy.
+        """
+        mapping = self.get("pipeline_chunking_map", {})
+        strategy = mapping.get(pipeline_name, self.get("splitting_configs.default_strategy"))
+        return strategy
+
 
     def get_vectorstore_config(self, name: str = None):
         return self.get(f"vectorstores.{name or self.get('vectorstores.default')}", {})

@@ -31,7 +31,9 @@ class ModelFactory:
                 cls = getattr(module, class_name)
 
             kwargs = {k: v for k, v in cfg.items() if k not in ["import_path", "class"]}
-            logger.info(f"Loading {model_type} {name or kwargs.get('model_name')}")
+            # ADD THIS DEBUG LOGGING
+            logger.info(f"{model_type} config kwargs: {kwargs}")
+            logger.info(f"max_tokens in kwargs: {kwargs.get('max_tokens')}")
             return cls(**kwargs)
 
         except Exception as e:

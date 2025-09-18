@@ -86,7 +86,7 @@ preprocessing:
     .pptx: langchain_community.document_loaders.UnstructuredPowerPointLoader
     .md: langchain_community.document_loaders.UnstructuredMarkdownLoader
     .txt: langchain_community.document_loaders.TextLoader
-    .csv: langchain_community.document_loaders.CSVLoader
+    .csv: src.components.batch_csv_loader.BatchCSVLoader
     .xls: langchain_community.document_loaders.UnstructuredExcelLoader
     .xlsx: langchain_community.document_loaders.UnstructuredExcelLoader
     .sqlite: langchain_community.document_loaders.SQLLoader
@@ -214,8 +214,8 @@ models:
       model_name: mistral-small
       import_path: langchain_mistralai.ChatMistralAI
       api_key: ${MISTRAL_API_KEY}
-      temperature: 0.3
-      max_tokens: 128
+      temperature: 0.6
+      max_tokens: 1024
 
     openai:
       model_name: gpt-4o-mini

@@ -6,11 +6,11 @@ document_analysis:
     input_variables: ["document_text"]
     template: |
       You are an expert technical editor.
-      Summarize the following chunk **clearly, concisely, and in under 120 words**.
-      Focus on key facts, decisions, metrics, and outcomes.
+      Provide a comprehensive and detailed summary of the following chunk.
+      Include all key facts, decisions, metrics, outcomes, and important context.
       Return JSON strictly:
       {{
-        "summary": "<your summary here>"
+        "summary": "<your detailed summary here>"
       }}
 
       CHUNK:
@@ -20,20 +20,19 @@ document_analysis:
     input_variables: ["chunk_summaries"]
     template: |
       You are an expert technical editor.
-      Aggregate the following chunk summaries into a concise final summary **under 8 sentences**, keeping only:
-      - Key facts
-      - Decisions
-      - Metrics or numbers
-      - Outcomes
-      Avoid repetition and minor details.
+      Synthesize the following chunk summaries into a comprehensive final summary.
+      Include all important information while maintaining coherence:
+      - Key facts and context
+      - Major decisions and rationale
+      - Relevant metrics and numbers
+      - Significant outcomes and implications
       Return JSON strictly:
       {{
-        "summary": "<final document summary>"
+        "summary": "<comprehensive document summary>"
       }}
 
       CHUNK SUMMARIES:
       {chunk_summaries}
-
 # =====================================
 # DOCUMENT COMPARISON PROMPTS
 # =====================================

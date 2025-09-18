@@ -31,6 +31,14 @@ class DocumentAnalysisPipeline:
             self.llm = factory.load_llm()
             logger.info("DocumentAnalysisPipeline initialized successfully.")
 
+             # ADD THIS DEBUGGING
+            logger.info(f"Loaded LLM: {self.llm}")
+            logger.info(f"LLM type: {type(self.llm)}")
+            if hasattr(self.llm, 'max_tokens'):
+                logger.info(f"Actual max_tokens: {self.llm.max_tokens}")
+            else:
+                logger.warning("LLM has no max_tokens attribute")
+
         except Exception as e:
             logger.error(f"Failed to initialize DocumentAnalysisPipeline: {e}")
             raise CustomException("Pipeline initialization failed", e)

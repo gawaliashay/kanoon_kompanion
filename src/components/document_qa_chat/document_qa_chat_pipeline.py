@@ -32,6 +32,15 @@ class DocumentQAChatPipeline:
         try:
             self.model_factory = ModelFactory()
             self.llm = llm or self.model_factory.load_llm()
+
+            # ADD THIS DEBUGGING
+            logger.info(f"Loaded LLM: {self.llm}")
+            logger.info(f"LLM type: {type(self.llm)}")
+            if hasattr(self.llm, 'max_tokens'):
+                logger.info(f"Actual max_tokens: {self.llm.max_tokens}")
+            else:
+                logger.warning("LLM has no max_tokens attribute")
+
             self.embedding = embedding or self.model_factory.load_embedding()
             self.rag_utils = RAGUtils()
             

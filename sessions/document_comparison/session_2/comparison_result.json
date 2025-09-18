@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-09-18T11:55:04.727313",
+  "doc1_files": [
+    "4e5c7a865d9b4a709dc6bf99e7def081_Index-II_1.docx"
+  ],
+  "doc2_files": [
+    "a00324b545d64f3f8acf312c7bcae0c9_Index-II_3.docx"
+  ],
+  "comparison_result": {
+    "strategy": "chunkwise",
+    "comparisons": [
+      {
+        "similarities": [
+          "Both are leave and license agreements",
+          "Both documents have a maintenance fee in addition to the rent",
+          "Both agreements have a duration of 11 months"
+        ],
+        "differences": [
+          "Document 1 is registered in Pune and Document 2 in Mumbai",
+          "Document 1 is between Rajesh Sharma and Priya Nair, while Document 2 is between Ashok Gupta and Rahul Desai",
+          "The property in Document 1 is a flat in Rose Residency, Baner, Pune, and the property in Document 2 is a flat in Ocean Heights, Andheri West, Mumbai",
+          "The monthly rent in Document 1 is ₹25,000 and in Document 2 is ₹60,000"
+        ],
+        "unique_doc1": [
+          "The owner of the property in Document 1 is Rajesh Sharma, s/o late Mohan Sharma",
+          "The licensee of the property in Document 1 is Priya Nair, d/o Anil Nair, from Kochi, Kerala"
+        ],
+        "unique_doc2": [
+          "The owner of the property in Document 2 is Ashok Gupta, s/o Shyam Gupta",
+          "The licensee of the property in Document 2 is Rahul Desai, s/o Mahesh Desai, from Surat, Gujarat",
+          "The registration date of Document 2 is 10/01/2025"
+        ]
+      }
+    ],
+    "summary": {
+      "similarities": [
+        "Both are leave and license agreements",
+        "Both documents have a maintenance fee in addition to the rent",
+        "Both agreements have a duration of 11 months"
+      ],
+      "differences": [
+        "Document 1 is registered in Pune, Document 2 in Mumbai",
+        "Parties involved are different",
+        "Properties are different with different locations",
+        "Different monthly rent amounts"
+      ],
+      "unique_doc1": [
+        "The owner of the property in Document 1 is Rajesh Sharma, s/o late Mohan Sharma",
+        "The licensee of the property in Document 1 is Priya Nair, d/o Anil Nair, from Kochi, Kerala"
+      ],
+      "unique_doc2": [
+        "The owner of the property in Document 2 is Ashok Gupta, s/o Shyam Gupta",
+        "The licensee of the property in Document 2 is Rahul Desai, s/o Mahesh Desai, from Surat, Gujarat",
+        "The registration date of Document 2 is 10/01/2025"
+      ]
+    }
+  }
+}

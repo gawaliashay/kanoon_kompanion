@@ -43,6 +43,14 @@ class DocumentComparisonPipeline:
             factory = ModelFactory(config)
             self.llm = factory.load_llm()
 
+            # ADD THIS DEBUGGING
+            logger.info(f"Loaded LLM: {self.llm}")
+            logger.info(f"LLM type: {type(self.llm)}")
+            if hasattr(self.llm, 'max_tokens'):
+                logger.info(f"Actual max_tokens: {self.llm.max_tokens}")
+            else:
+                logger.warning("LLM has no max_tokens attribute")
+
             # Load chains dynamically from enabled steps
             steps_cfg = config.get("document_comparison.steps", {})
             self.chains: Dict[str, RunnableSequence] = {}

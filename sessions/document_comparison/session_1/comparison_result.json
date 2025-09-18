@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-09-18T10:26:11.039403",
+  "doc1_files": [
+    "d4816e976da64dc8ae26f69b31f9d716_Index-II_1.docx"
+  ],
+  "doc2_files": [
+    "7cd681c43ad642c9bab0bce331960c0a_Index-II_3.docx"
+  ],
+  "comparison_result": {
+    "strategy": "chunkwise",
+    "comparisons": [
+      {
+        "similarities": [
+          "Both are leave and license agreements",
+          "Both documents have a maintenance fee",
+          "The duration of the agreements is 11 months"
+        ],
+        "differences": [
+          "Document 1 is registered in Pune, Document 2 is registered in Mumbai",
+          "Document 1 is between Rajesh Sharma and Priya Nair, Document 2 is between Ashok Gupta and Rahul Desai",
+          "The property in Document 1 is a flat in Rose Residency, Baner, Pune, while"
+        ],
+        "unique_doc1": [],
+        "unique_doc2": []
+      }
+    ],
+    "summary": {
+      "similarities": [
+        "Both are leave and license agreements",
+        "Both documents have a maintenance fee",
+        "The duration of the agreements is 11 months"
+      ],
+      "differences": [
+        "Document 1 is registered in Pune, Document 2 is registered in Mumbai",
+        "Parties involved are different: Document 1 is between Rajesh Sharma and Priya Nair, Document 2 is between Ashok Gupta and Rahul Desai",
+        "Property details are different: The property in Document 1 is a flat in Rose Residency, Baner, Pune,"
+      ],
+      "unique_doc1": [],
+      "unique_doc2": []
+    }
+  }
+}

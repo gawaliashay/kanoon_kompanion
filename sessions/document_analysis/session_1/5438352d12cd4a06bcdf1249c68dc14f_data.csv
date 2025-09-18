@@ -1,5 +1,0 @@
-Agreement_ID,Landlord_Name,Tenant_Name,Property_Address,Start_Date,End_Date,Monthly_Rent,Deposit_Amount,Payment_Due_Date,Agreement_Status
-RA001,Raj Kumar,Anil Sharma,101 Green Park,2025-01-01,2025-12-31,12000,24000,01,Active
-RA002,Sunita Patel,Priya Mehra,202 Rosewood Apt,2025-02-01,2026-01-31,18000,36000,05,Active
-RA003,Suresh Raina,Vikram Singh,305 Metro Tower,2025-03-15,2026-03-14,15000,30000,10,Notice Served
-RA004,Asha Rao,Deepak Jain,12 Lakeview Rd,2025-04-01,2026-03-31,16000,32000,07,Terminated

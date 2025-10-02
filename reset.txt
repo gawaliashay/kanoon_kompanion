@@ -1,0 +1,6 @@
+# Reset to last push from remote
+    git fetch origin
+    git reset --hard origin/main
+
+# Clean up any untracked files (if needed)
+    git clean -fd

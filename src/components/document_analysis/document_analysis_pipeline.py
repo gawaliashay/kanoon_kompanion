@@ -1,4 +1,4 @@
-# src/document_analysis/document_analysis_pipeline.py
+ # src/document_analysis/document_analysis_pipeline.py
 
 from __future__ import annotations
 from pathlib import Path
@@ -21,23 +21,18 @@ class DocumentAnalysisPipeline:
 
     def __init__(self):
         try:
-            # Ingest + preprocess
+            # ---- Ingest + Preprocess ----
             self.ingestor = DocumentAnalysisIngestor()
             self.preprocessor = DocumentPreprocessingPipeline()
-            self.parser = get_document_analysis_parser()
 
-            # Load LLM from config
+            # ---- Load LLM ----
             factory = ModelFactory(config)
             self.llm = factory.load_llm()
-            logger.info("DocumentAnalysisPipeline initialized successfully.")
 
-             # ADD THIS DEBUGGING
-            logger.info(f"Loaded LLM: {self.llm}")
-            logger.info(f"LLM type: {type(self.llm)}")
-            if hasattr(self.llm, 'max_tokens'):
-                logger.info(f"Actual max_tokens: {self.llm.max_tokens}")
-            else:
-                logger.warning("LLM has no max_tokens attribute")
+            # ---- Robust parser with OutputFixingParser ----
+            self.parser = get_document_analysis_parser(llm=self.llm)
+
+            logger.info("DocumentAnalysisPipeline initialized successfully.")
 
         except Exception as e:
             logger.error(f"Failed to initialize DocumentAnalysisPipeline: {e}")
@@ -58,26 +53,40 @@ class DocumentAnalysisPipeline:
 
     def _batch_process(self, texts: List[str], step: str) -> List[str]:
         """Run a prompt step (summary_map / summary_reduce) across chunks in batches."""
-        results = []
+        results: List[str] = []
 
-        # Get prompt config from prompts_loader
         prompt_cfg = prompts.get_analysis_prompt(step)
         if not prompt_cfg:
             raise CustomException(f"Prompt config '{step}' not found", ValueError(step))
 
         chain = self._build_chain(prompt_cfg)
-        batch_size = config.get("document_analysis.batch_size", 10)
-        fallback_len = config.get("document_analysis.chunk_fallback_length", 500)
+        batch_size = config.get("document_analysis.batch_size", 10)  # Added default
+        fallback_len = config.get("document_analysis.chunk_fallback_length", 500)  # Added default
 
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
+            
+            # Fix: Create proper input dictionaries based on the prompt's input variables
+            inputs = []
             for text in batch:
-                try:
-                    result = chain.invoke({prompt_cfg["input_variables"][0]: text})
-                    results.append(result.dict()["summary"])
-                except Exception as e:
-                    logger.warning(f"Step '{step}' failed on chunk: {e}")
-                    results.append(text[:fallback_len])  # fallback
+                input_dict = {}
+                if "document_text" in prompt_cfg["input_variables"]:
+                    input_dict["document_text"] = text
+                if "chunk_summaries" in prompt_cfg["input_variables"]:
+                    input_dict["chunk_summaries"] = text
+                if "summary" in prompt_cfg["input_variables"]:
+                    input_dict["summary"] = ""  # Empty for first pass
+                inputs.append(input_dict)
+
+            try:
+                outputs = chain.batch(inputs)
+                for out in outputs:
+                    results.append(out.dict()["summary"])
+            except Exception as e:
+                logger.warning(f"Step '{step}' failed on batch {i // batch_size}: {e}")
+                for text in batch:
+                    # Simple JSON-safe fallback
+                    results.append(text[:fallback_len])
 
         return results
 
@@ -87,13 +96,10 @@ class DocumentAnalysisPipeline:
         """Run full analysis pipeline: ingest → preprocess → summary_map → summary_reduce."""
         try:
             # ---- Ingest ----
-            if file_paths:
-                logger.info(f"Starting document analysis for files: {file_paths}")
-                docs = self.ingestor.load_documents(file_paths)
-            else:
-                logger.info("Starting document analysis for default analysis directory")
-                docs = self.ingestor.load_documents()
-
+            docs = (
+                self.ingestor.load_documents(file_paths)
+                if file_paths else self.ingestor.load_documents()
+            )
             if not docs:
                 raise CustomException("No documents ingested", ValueError(file_paths))
 

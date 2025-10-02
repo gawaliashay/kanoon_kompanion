@@ -156,3 +156,4 @@ class CommonDocumentLoader:
         except Exception as e:
             logger.error(f"Failed to load SQLite DB {db_path}: {e}")
             raise CustomException(f"Failed to load SQLite DB: {db_path}", e)
+

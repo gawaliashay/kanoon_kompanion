@@ -1,19 +1,22 @@
 # requirements.txt
 
 langchain
-langchain_openai
-langchain_pinecone
-langchain_google
-langchain_google_genai
-langchain_groq
+#langchain_openai
+#langchain_pinecone
+#langchain_google
+#langchain_google_genai
+#langchain_groq
 langchain_mistralai
 langchain_huggingface
 langchain_community
+
+#sentence-transformers
 pandas
 
 
 pypdf
 pydantic
+pydantic-settings
 structlog
 jsonschema 
 
@@ -21,3 +24,6 @@ fastapi
 uvicorn
 jinja2
 python-multipart
+
+boto3
+botocore

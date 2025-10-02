@@ -1,38 +1,38 @@
+# src\configuration\prompts.yaml
+
 # =====================================
-# DOCUMENT ANALYSIS PROMPTS
+# UNIVERSAL LEGAL DOCUMENT ANALYSIS PROMPTS - MAP-REDUCE
 # =====================================
 document_analysis:
   summary_map:
-    input_variables: ["document_text"]
+    input_variables: ["summary", "document_text"]
     template: |
-      You are an expert technical editor.
-      Provide a comprehensive and detailed summary of the following chunk.
-      Include all key facts, decisions, metrics, outcomes, and important context.
-      Return JSON strictly:
-      {{
-        "summary": "<your detailed summary here>"
-      }}
+      Analyze this legal document chunk and extract the essential legal content.
+      Write a **clear, concise legal summary** focusing on:
+      - Core legal principles, obligations, or rights
+      - Key provisions, clauses, or stipulations
+      - Critical definitions, conditions, or requirements
+      - Omit procedural details, examples, or repetitions unless legally significant
+      # - Limit to **100 words min** and  **200 words max**
+      - Return strictly as a JSON object: {{ "summary": "your summary text here" }}
 
-      CHUNK:
+      LEGAL DOCUMENT CHUNK:
       {document_text}
 
   summary_reduce:
-    input_variables: ["chunk_summaries"]
+    input_variables: ["summary", "chunk_summaries"]
     template: |
-      You are an expert technical editor.
-      Synthesize the following chunk summaries into a comprehensive final summary.
-      Include all important information while maintaining coherence:
-      - Key facts and context
-      - Major decisions and rationale
-      - Relevant metrics and numbers
-      - Significant outcomes and implications
-      Return JSON strictly:
-      {{
-        "summary": "<comprehensive document summary>"
-      }}
+      Synthesize these legal document chunk summaries into a **coherent legal summary**.
+      - Consolidate legal principles and key provisions
+      - Remove redundant information while preserving legal nuance
+      - Maintain logical legal structure and hierarchy of concepts
+      - Ensure accuracy in representing legal relationships and obligations
+      # - Limit to **200 words min** and  **500 words max**
+      - Return strictly as a JSON object: {{ "summary": "your consolidated summary here" }}
 
       CHUNK SUMMARIES:
       {chunk_summaries}
+
 # =====================================
 # DOCUMENT COMPARISON PROMPTS
 # =====================================

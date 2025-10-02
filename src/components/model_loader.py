@@ -1,11 +1,20 @@
 # src\components\model_loader.py
 
 import importlib
+import inspect
 from typing import Any, Dict
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
 from src.utils.common_utils import timed
+
+
+# Generic to provider key mapping
+GENERIC_TO_PROVIDER = {
+    "max_tokens": ["max_tokens", "max_output_tokens", "max_new_tokens"],
+    "temperature": ["temperature", "temp"],
+    # Add more generic params as needed
+}
 
 
 class ModelFactory:
@@ -30,11 +39,27 @@ class ModelFactory:
                 module = importlib.import_module(module_path)
                 cls = getattr(module, class_name)
 
+            # Prepare kwargs
             kwargs = {k: v for k, v in cfg.items() if k not in ["import_path", "class"]}
-            # ADD THIS DEBUG LOGGING
-            logger.info(f"{model_type} config kwargs: {kwargs}")
-            logger.info(f"max_tokens in kwargs: {kwargs.get('max_tokens')}")
-            return cls(**kwargs)
+
+            # Map generic keys to provider-specific keys dynamically
+            sig = inspect.signature(cls)
+            final_kwargs = {}
+            for generic_key, provider_keys in GENERIC_TO_PROVIDER.items():
+                if generic_key in kwargs:
+                    for pk in provider_keys:
+                        if pk in sig.parameters:
+                            final_kwargs[pk] = kwargs[generic_key]
+                            break
+                    kwargs.pop(generic_key)
+
+            # Merge remaining kwargs that are accepted by the constructor
+            for k, v in kwargs.items():
+                if k in sig.parameters:
+                    final_kwargs[k] = v
+
+            logger.info(f"{model_type} config kwargs (mapped): {final_kwargs}")
+            return cls(**final_kwargs)
 
         except Exception as e:
             raise CustomException(f"Failed to load {model_type}", e)

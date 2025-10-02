@@ -1,83 +1,116 @@
+# api/session_manager.py
 import json
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+import time
+import uuid
 from datetime import datetime
-import shutil
+from typing import List, Dict, Any, Optional
+import boto3
+from botocore.exceptions import ClientError
 
-# Base directory for all sessions
-BASE_DIR = Path("sessions")
-BASE_DIR.mkdir(exist_ok=True)
+from api.config import settings
 
-# In-memory cache
+# Initialize S3 client
+s3_client = boto3.client('s3', region_name=settings.aws_region)
+
+# In-memory cache for active sessions
 conversation_cache: Dict[str, Dict[int, List[Dict[str, Any]]]] = {}
 analysis_cache: Dict[str, Dict[int, Dict[str, Any]]] = {}
 comparison_cache: Dict[str, Dict[int, Dict[str, Any]]] = {}
 
 
 # ----------------------------
-# Session Management
+# S3 Session Storage
 # ----------------------------
-def _get_next_session_dir(route_name: str) -> Path:
-    route_dir = BASE_DIR / route_name
-    route_dir.mkdir(parents=True, exist_ok=True)
-
-    existing_sessions = [
-        d.name for d in route_dir.iterdir()
-        if d.is_dir() and d.name.startswith("session_")
-    ]
-    numbers = []
-    for session in existing_sessions:
-        try:
-            number = int(session.split("_")[1])
-            numbers.append(number)
-        except (IndexError, ValueError):
-            continue
-    
-    next_number = max(numbers, default=0) + 1
-
-    session_dir = route_dir / f"session_{next_number}"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    return session_dir
+def _get_s3_key(route_name: str, session_number: int, file_type: str) -> str:
+    """Generate S3 key for session files"""
+    return f"sessions/{route_name}/session_{session_number}/{file_type}.json"
 
 
+def _save_to_s3(data: Dict[str, Any], key: str) -> None:
+    """Save data to S3"""
+    try:
+        s3_client.put_object(
+            Bucket=settings.s3_bucket,
+            Key=key,
+            Body=json.dumps(data, ensure_ascii=False),
+            ContentType='application/json'
+        )
+    except ClientError as e:
+        print(f"Error saving to S3: {e}")
+        raise
+
+
+def _load_from_s3(key: str) -> Optional[Dict[str, Any]]:
+    """Load data from S3"""
+    try:
+        response = s3_client.get_object(
+            Bucket=settings.s3_bucket,
+            Key=key
+        )
+        return json.loads(response['Body'].read().decode('utf-8'))
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'NoSuchKey':
+            return None
+        print(f"Error loading from S3: {e}")
+        raise
+
+
+# ----------------------------
+# File Upload Management
+# ----------------------------
 def save_uploaded_files(
     route_name: str,
-    files: List[Path],
+    file_contents: List[tuple],  # (filename, file_content)
     comparison: bool = False
-) -> Path:
+) -> int:
     """
-    Save uploaded files into a session directory.
+    Save uploaded files to S3 and return session number
     """
-    session_dir = _get_next_session_dir(route_name)
-
+    session_number = _get_next_session_number()
+    
     if comparison:
-        # Split files into two groups for comparison
-        half = len(files) // 2
-        files_a = files[:half]
-        files_b = files[half:]
+        # Split files into two groups
+        half = len(file_contents) // 2
+        files_a = file_contents[:half]
+        files_b = file_contents[half:]
         
-        # Two sets of files (doc1 vs doc2)
-        doc1_dir = session_dir / "doc1"
-        doc2_dir = session_dir / "doc2"
-        doc1_dir.mkdir(parents=True, exist_ok=True)
-        doc2_dir.mkdir(parents=True, exist_ok=True)
-
-        for file_path in files_a:
-            shutil.copy2(file_path, doc1_dir / file_path.name)
-        for file_path in files_b:
-            shutil.copy2(file_path, doc2_dir / file_path.name)
+        # Upload files to S3
+        for filename, content in files_a:
+            s3_key = f"uploads/{route_name}/session_{session_number}/doc1/{filename}"
+            s3_client.put_object(
+                Bucket=settings.s3_bucket,
+                Key=s3_key,
+                Body=content,
+                ContentType='application/octet-stream'
+            )
+        
+        for filename, content in files_b:
+            s3_key = f"uploads/{route_name}/session_{session_number}/doc2/{filename}"
+            s3_client.put_object(
+                Bucket=settings.s3_bucket,
+                Key=s3_key,
+                Body=content,
+                ContentType='application/octet-stream'
+            )
     else:
-        for file_path in files:
-            shutil.copy2(file_path, session_dir / file_path.name)
+        for filename, content in file_contents:
+            s3_key = f"uploads/{route_name}/session_{session_number}/{filename}"
+            s3_client.put_object(
+                Bucket=settings.s3_bucket,
+                Key=s3_key,
+                Body=content,
+                ContentType='application/octet-stream'
+            )
+    
+    return session_number
 
-    # Clean up temporary files
-    for file_path in files:
-        try:
-            file_path.unlink()
-        except:
-            pass
 
-    return session_dir
+
+
+def _get_next_session_number() -> int:
+    return int(time.time() * 1000)  # millisecond precision
+
+
 
 
 # ----------------------------
@@ -90,9 +123,7 @@ def save_conversation(
     answer: str,
     uploaded_files: Optional[List[str]] = None
 ) -> None:
-    """
-    Save conversation both in-memory and on disk.
-    """
+    """Save conversation to S3"""
     if route_name not in conversation_cache:
         conversation_cache[route_name] = {}
     if session_number not in conversation_cache[route_name]:
@@ -108,41 +139,27 @@ def save_conversation(
 
     conversation_cache[route_name][session_number].append(entry)
 
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    log_file = session_dir / "conversations.json"
-
-    with log_file.open("w", encoding="utf-8") as f:
-        json.dump(conversation_cache[route_name][session_number], f, indent=2, ensure_ascii=False)
+    # Save to S3
+    key = _get_s3_key(route_name, session_number, "conversations")
+    _save_to_s3(conversation_cache[route_name][session_number], key)
 
 
 def get_conversations(route_name: str, session_number: int) -> List[Dict[str, Any]]:
-    """
-    Load conversations from cache or disk.
-    """
+    """Load conversations from S3"""
     # Check cache first
     if route_name in conversation_cache and session_number in conversation_cache[route_name]:
         return conversation_cache[route_name][session_number]
 
-    # Load from disk if not in cache
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    log_file = session_dir / "conversations.json"
-    
-    if not log_file.exists():
-        return []
-
-    try:
-        with log_file.open("r", encoding="utf-8") as f:
-            history = json.load(f)
-        
-        # Update cache
+    # Load from S3
+    key = _get_s3_key(route_name, session_number, "conversations")
+    data = _load_from_s3(key)
+    if data:
         if route_name not in conversation_cache:
             conversation_cache[route_name] = {}
-        conversation_cache[route_name][session_number] = history
-        
-        return history
-    except (json.JSONDecodeError, FileNotFoundError):
-        return []
+        conversation_cache[route_name][session_number] = data
+        return data
+    
+    return []
 
 
 # ----------------------------
@@ -154,9 +171,7 @@ def save_analysis_result(
     result: Dict[str, Any],
     uploaded_files: List[str]
 ) -> None:
-    """
-    Save analysis result to session directory.
-    """
+    """Save analysis result to S3"""
     if route_name not in analysis_cache:
         analysis_cache[route_name] = {}
     
@@ -168,41 +183,25 @@ def save_analysis_result(
     
     analysis_cache[route_name][session_number] = analysis_data
 
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    result_file = session_dir / "analysis_result.json"
-
-    with result_file.open("w", encoding="utf-8") as f:
-        json.dump(analysis_data, f, indent=2, ensure_ascii=False)
+    # Save to S3
+    key = _get_s3_key(route_name, session_number, "analysis_result")
+    _save_to_s3(analysis_data, key)
 
 
 def get_analysis_result(route_name: str, session_number: int) -> Optional[Dict[str, Any]]:
-    """
-    Load analysis result from cache or disk.
-    """
-    # Check cache first
+    """Load analysis result from S3"""
     if route_name in analysis_cache and session_number in analysis_cache[route_name]:
         return analysis_cache[route_name][session_number]
 
-    # Load from disk if not in cache
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    result_file = session_dir / "analysis_result.json"
-    
-    if not result_file.exists():
-        return None
-
-    try:
-        with result_file.open("r", encoding="utf-8") as f:
-            result_data = json.load(f)
-        
-        # Update cache
+    key = _get_s3_key(route_name, session_number, "analysis_result")
+    data = _load_from_s3(key)
+    if data:
         if route_name not in analysis_cache:
             analysis_cache[route_name] = {}
-        analysis_cache[route_name][session_number] = result_data
-        
-        return result_data
-    except (json.JSONDecodeError, FileNotFoundError):
-        return None
+        analysis_cache[route_name][session_number] = data
+        return data
+    
+    return None
 
 
 # ----------------------------
@@ -215,9 +214,7 @@ def save_comparison_result(
     doc1_files: List[str],
     doc2_files: List[str]
 ) -> None:
-    """
-    Save comparison result to session directory.
-    """
+    """Save comparison result to S3"""
     if route_name not in comparison_cache:
         comparison_cache[route_name] = {}
     
@@ -230,38 +227,21 @@ def save_comparison_result(
     
     comparison_cache[route_name][session_number] = comparison_data
 
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    result_file = session_dir / "comparison_result.json"
-
-    with result_file.open("w", encoding="utf-8") as f:
-        json.dump(comparison_data, f, indent=2, ensure_ascii=False)
+    key = _get_s3_key(route_name, session_number, "comparison_result")
+    _save_to_s3(comparison_data, key)
 
 
 def get_comparison_result(route_name: str, session_number: int) -> Optional[Dict[str, Any]]:
-    """
-    Load comparison result from cache or disk.
-    """
-    # Check cache first
+    """Load comparison result from S3"""
     if route_name in comparison_cache and session_number in comparison_cache[route_name]:
         return comparison_cache[route_name][session_number]
 
-    # Load from disk if not in cache
-    session_dir = BASE_DIR / route_name / f"session_{session_number}"
-    result_file = session_dir / "comparison_result.json"
-    
-    if not result_file.exists():
-        return None
-
-    try:
-        with result_file.open("r", encoding="utf-8") as f:
-            result_data = json.load(f)
-        
-        # Update cache
+    key = _get_s3_key(route_name, session_number, "comparison_result")
+    data = _load_from_s3(key)
+    if data:
         if route_name not in comparison_cache:
             comparison_cache[route_name] = {}
-        comparison_cache[route_name][session_number] = result_data
-        
-        return result_data
-    except (json.JSONDecodeError, FileNotFoundError):
-        return None
+        comparison_cache[route_name][session_number] = data
+        return data
+    
+    return None

@@ -1,5 +1,4 @@
-# api\app.py
-
+# api/app.py
 from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,14 +6,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from pathlib import Path
-import shutil
-import tempfile
-import os
 import uuid
 import json
-from datetime import datetime
 
+from api.config import settings
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 
@@ -23,13 +18,18 @@ from src.components.document_analysis.document_analysis_pipeline import Document
 from src.components.document_comparison.document_comparison_pipeline import DocumentComparisonPipeline
 from src.components.document_qa_chat.document_qa_chat_pipeline import create_document_qa_chat_pipeline
 
-# Session manager
+# Updated session manager
 from api.session_manager import save_uploaded_files, save_conversation, get_conversations, save_analysis_result, save_comparison_result
 
 # ----------------------------
 # Initialize FastAPI
 # ----------------------------
-app = FastAPI(title="Document Processing API", version="1.0.0")
+app = FastAPI(
+    title=settings.project_name,
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -62,6 +62,14 @@ class APIResponse(BaseModel):
 
 
 # ----------------------------
+# Health Check (for ALB)
+# ----------------------------
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "healthy", "service": settings.project_name}
+
+
+# ----------------------------
 # Welcome
 # ----------------------------
 @app.get("/", response_class=HTMLResponse)
@@ -73,7 +81,8 @@ async def api_welcome():
     return APIResponse(
         success=True,
         result={
-            "message": "🚀 Welcome to Document Processing API",
+            "message": f"Welcome to {settings.project_name}",
+            "environment": settings.environment,
             "routes": {
                 "Document Analysis": "/document_analysis",
                 "Document Comparison": "/document_comparison",
@@ -92,29 +101,42 @@ async def document_analysis(files: List[UploadFile] = File(...)):
         if not files:
             raise HTTPException(status_code=400, detail="No files uploaded")
         
-        tmp_files = []
+        # Read file contents and prepare for S3 upload
+        file_contents = []
         for file in files:
-            # Create unique filename to avoid conflicts
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            tmp_path = Path(tempfile.gettempdir()) / unique_filename
-            
-            # Read file content before it gets closed
             content = await file.read()
-            with tmp_path.open("wb") as buffer:
-                buffer.write(content)
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            file_contents.append((unique_filename, content))
+
+        # Save files to S3 and get session number
+        session_number = save_uploaded_files("document_analysis", file_contents)
+        uploaded_files = [f[0] for f in file_contents]
+
+        # Process files - you'll need to adapt your pipelines to work with S3
+        # For now, using temporary files (not ideal for production)
+        import tempfile
+        import os
+        tmp_files = []
+        for filename, content in file_contents:
+            tmp_path = os.path.join(tempfile.gettempdir(), filename)
+            with open(tmp_path, 'wb') as f:
+                f.write(content)
             tmp_files.append(tmp_path)
 
-        session_dir = save_uploaded_files("document_analysis", tmp_files)
-        uploaded_files = [f.name for f in session_dir.iterdir() if f.is_file()]
+        result = analysis_pipeline.run_analysis(tmp_files)
 
-        result = analysis_pipeline.run_analysis([str(f) for f in session_dir.iterdir() if f.is_file()])
+        # Cleanup temp files
+        for tmp_file in tmp_files:
+            try:
+                os.unlink(tmp_file)
+            except:
+                pass
 
-        # Save analysis result to session directory
-        session_number = int(session_dir.name.split("_")[1])
+        # Save analysis result
         save_analysis_result("document_analysis", session_number, result, uploaded_files)
 
         return APIResponse(success=True, result={
-            "session": str(session_dir),
+            "session": session_number,
             "uploaded_files": uploaded_files,
             "analysis": result
         })
@@ -138,46 +160,53 @@ async def document_comparison(
         if not files_a or not files_b:
             raise HTTPException(status_code=400, detail="Both file sets are required")
         
-        tmp_files_a, tmp_files_b = [], []
-        
-        # Process files_a
+        # Read file contents
+        all_files = []
         for file in files_a:
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            tmp_path = Path(tempfile.gettempdir()) / unique_filename
             content = await file.read()
-            with tmp_path.open("wb") as buffer:
-                buffer.write(content)
-            tmp_files_a.append(tmp_path)
-
-        # Process files_b
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            all_files.append((unique_filename, content))
+        
         for file in files_b:
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            tmp_path = Path(tempfile.gettempdir()) / unique_filename
             content = await file.read()
-            with tmp_path.open("wb") as buffer:
-                buffer.write(content)
-            tmp_files_b.append(tmp_path)
+            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+            all_files.append((unique_filename, content))
 
-        session_dir = save_uploaded_files(
-            "document_comparison", 
-            tmp_files_a + tmp_files_b, 
-            comparison=True
-        )
+        # Save files to S3 with comparison structure
+        session_number = save_uploaded_files("document_comparison", all_files, comparison=True)
+        
+        doc1_files = [f[0] for f in all_files[:len(all_files)//2]]
+        doc2_files = [f[0] for f in all_files[len(all_files)//2:]]
 
-        doc1_files = [f.name for f in (session_dir / "doc1").iterdir() if f.is_file()]
-        doc2_files = [f.name for f in (session_dir / "doc2").iterdir() if f.is_file()]
+        # Process files (adapt your pipeline for S3)
+        import tempfile
+        import os
+        tmp_files_a = []
+        tmp_files_b = []
+        
+        for i, (filename, content) in enumerate(all_files):
+            tmp_path = os.path.join(tempfile.gettempdir(), filename)
+            with open(tmp_path, 'wb') as f:
+                f.write(content)
+            if i < len(all_files)//2:
+                tmp_files_a.append(tmp_path)
+            else:
+                tmp_files_b.append(tmp_path)
 
-        result = comparison_pipeline.run_comparison(
-            [str(f) for f in (session_dir / "doc1").iterdir() if f.is_file()],
-            [str(f) for f in (session_dir / "doc2").iterdir() if f.is_file()]
-        )
+        result = comparison_pipeline.run_comparison(tmp_files_a, tmp_files_b)
 
-        # Save comparison result to session directory
-        session_number = int(session_dir.name.split("_")[1])
+        # Cleanup
+        for tmp_file in tmp_files_a + tmp_files_b:
+            try:
+                os.unlink(tmp_file)
+            except:
+                pass
+
+        # Save comparison result
         save_comparison_result("document_comparison", session_number, result, doc1_files, doc2_files)
 
         return APIResponse(success=True, result={
-            "session": str(session_dir),
+            "session": session_number,
             "uploaded_files": {"doc1": doc1_files, "doc2": doc2_files},
             "comparison": result
         })
@@ -198,36 +227,44 @@ async def document_qa_chat(
     question: str = Form(...),
     files: List[UploadFile] = File(None)
 ):
-    """
-    Upload documents (required for first request in a session).
-    Maintains conversation history per client IP like a chatbot.
-    """
     client_id = request.client.host
 
     try:
         uploaded_files = []
         session_number = None
 
-        # Start new session if files are uploaded
         if files and len(files) > 0:
-            tmp_files = []
+            # Read file contents
+            file_contents = []
             for file in files:
-                unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-                tmp_path = Path(tempfile.gettempdir()) / unique_filename
                 content = await file.read()
-                with tmp_path.open("wb") as buffer:
-                    buffer.write(content)
-                tmp_files.append(tmp_path)
+                unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+                file_contents.append((unique_filename, content))
 
-            session_dir = save_uploaded_files("document_qa_chat", tmp_files)
-            session_number = int(session_dir.name.split("_")[1])
+            # Save files to S3
+            session_number = save_uploaded_files("document_qa_chat", file_contents)
+            uploaded_files = [f[0] for f in file_contents]
             user_sessions[client_id] = session_number
 
-            uploaded_doc_paths = [str(f) for f in session_dir.iterdir() if f.is_file()]
-            uploaded_files = [Path(f).name for f in uploaded_doc_paths]
+            # Process files (adapt your pipeline)
+            import tempfile
+            import os
+            tmp_files = []
+            for filename, content in file_contents:
+                tmp_path = os.path.join(tempfile.gettempdir(), filename)
+                with open(tmp_path, 'wb') as f:
+                    f.write(content)
+                tmp_files.append(tmp_path)
 
             # Ingest new docs
-            qa_chat_pipeline.ingest_new_documents(uploaded_doc_paths)
+            qa_chat_pipeline.ingest_new_documents(tmp_files)
+
+            # Cleanup
+            for tmp_file in tmp_files:
+                try:
+                    os.unlink(tmp_file)
+                except:
+                    pass
         else:
             # Continue existing session
             session_number = user_sessions.get(client_id)

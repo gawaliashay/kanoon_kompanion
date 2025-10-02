@@ -1,0 +1,86 @@
+{
+  "timestamp": "2025-09-24T14:24:46.136738",
+  "doc1_files": [
+    "d973b4d0a9714578b3c3fadb424d872c_Sale Deed1.pdf"
+  ],
+  "doc2_files": [
+    "46a41b35dc3e431f8155c4d4737fc48b_Sale Deed2.pdf"
+  ],
+  "comparison_result": {
+    "strategy": "chunkwise",
+    "comparisons": [
+      {
+        "similarities": [
+          "Both are sale deeds executed in New Delhi.",
+          "The seller is the absolute owner of the property.",
+          "The buyer has agreed to purchase the property at an agreed-upon price.",
+          "The seller confirms that the property is free from encumbrances, mortgages, or litigation.",
+          "The buyer has inspected the property and accepts it in its present condition.",
+          "The ownership rights shall be transferred upon registration and full payment of the consideration.",
+          "Both parties agree to comply with all applicable laws under the Transfer of Property Act, 1882."
+        ],
+        "differences": [
+          "Doc 1 is for a residential property while Doc 2 is for a commercial property.",
+          "The sellers have different names and addresses in both documents.",
+          "The buyers have different names and addresses in both documents.",
+          "The property location is the same (Connaught Place), but the specific address is different.",
+          "The consideration amount is different: ₹1,50,00,000 in Doc 1 and ₹2,00,00,000 in Doc 2."
+        ],
+        "unique_doc1": [
+          "The residential property is located at 78, Connaught Place, New Delhi – 110001."
+        ],
+        "unique_doc2": [
+          "The commercial property is located at 22, Connaught Place, New Delhi – 110001.",
+          "The buyer in Doc 2 is Mr. Rohit Mehta."
+        ]
+      },
+      {
+        "similarities": [
+          "The seller and buyer signed the document on a specific date.",
+          "The document was witnessed by two individuals."
+        ],
+        "differences": [
+          "The names of the witnesses are different in each document.",
+          "Document 1 includes the phrase 'mentioned above' which is not present in Document 2."
+        ],
+        "unique_doc1": [
+          "The names of the witnesses in Document 1 are Mr. Anil Kumar and Ms. Priya Singh."
+        ],
+        "unique_doc2": [
+          "The names of the witnesses in Document 2 are Mr. Sunil Verma and Ms. Kavita Sharma."
+        ]
+      }
+    ],
+    "summary": {
+      "similarities": [
+        "Both are sale deeds executed in New Delhi.",
+        "The seller is the absolute owner of the property.",
+        "The buyer has agreed to purchase the property at an agreed-upon price.",
+        "The seller confirms that the property is free from encumbrances, mortgages, or litigation.",
+        "The buyer has inspected the property and accepts it in its present condition.",
+        "The ownership rights shall be transferred upon registration and full payment of the consideration.",
+        "Both parties agree to comply with all applicable laws under the Transfer of Property Act, 1882.",
+        "The seller and buyer signed the document on a specific date.",
+        "The document was witnessed by two individuals."
+      ],
+      "differences": [
+        "Doc 1 is for a residential property while Doc 2 is for a commercial property.",
+        "The sellers have different names and addresses in both documents.",
+        "The buyers have different names and addresses in both documents.",
+        "The property location is the same (Connaught Place), but the specific address is different.",
+        "The consideration amount is different: ₹1,50,00,000 in Doc 1 and ₹2,00,00,000 in Doc 2.",
+        "The names of the witnesses are different in each document.",
+        "Document 1 includes the phrase 'mentioned above' which is not present in Document 2."
+      ],
+      "unique_doc1": [
+        "The residential property is located at 78, Connaught Place, New Delhi – 110001.",
+        "The names of the witnesses in Document 1 are Mr. Anil Kumar and Ms. Priya Singh."
+      ],
+      "unique_doc2": [
+        "The commercial property is located at 22, Connaught Place, New Delhi – 110001.",
+        "The buyer in Doc 2 is Mr. Rohit Mehta.",
+        "The names of the witnesses in Document 2 are Mr. Sunil Verma and Ms. Kavita Sharma."
+      ]
+    }
+  }
+}

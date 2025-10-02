@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Git & editor files
+.git/
+.vscode/
+
+# Local data, models, or temp files
+data/
+*.pkl
+*.db
+
+# Tests
+tests/
+*.test.py
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+sessions/
+logs/

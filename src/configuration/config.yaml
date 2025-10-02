@@ -17,6 +17,7 @@ api_keys:
 paths:
   logs_dir: logs/
   cache_dir: cache/
+  S3_BUCKET
 
   # analysis directory
   analysis_dir: data/analysis
@@ -108,7 +109,7 @@ splitting_configs:
   # Document Analysis
   analysis_strategy:
     import_path: langchain.text_splitter.RecursiveCharacterTextSplitter
-    chunk_size: 1024
+    chunk_size: 400
     chunk_overlap: 50
     separators: ["\n\n", "\n", " "]
 
@@ -180,7 +181,7 @@ llm_retries:
 # =====================================
 defaults:
   llm: mistral
-  embedding: huggingface
+  embedding: google
 
 models:
   embeddings:
@@ -208,28 +209,28 @@ models:
       import_path: langchain_groq.ChatGroq
       api_key: ${GROQ_API_KEY}
       temperature: 0.3
-      max_tokens: 128
+      max_tokens: 512
 
     mistral:
       model_name: mistral-small
       import_path: langchain_mistralai.ChatMistralAI
       api_key: ${MISTRAL_API_KEY}
       temperature: 0.6
-      max_tokens: 1024
+      max_tokens: 512
 
     openai:
       model_name: gpt-4o-mini
       import_path: langchain_openai.ChatOpenAI
       api_key: ${OPENAI_API_KEY}
       temperature: 0.7
-      max_tokens: 128
+      max_tokens: 512
 
     google:
-      model_name: gemini-1.5-flash
+      model: gemini-1.5-flash
       import_path: langchain_google_genai.ChatGoogleGenerativeAI
       api_key: ${GOOGLE_API_KEY}
-      temperature: 0
-      max_tokens: 128
+      temperature: 0.3
+      max_tokens: 512
 
 # =====================================
 # DOCUMENT ANALYSIS
@@ -242,7 +243,7 @@ document_analysis:
 
   steps:
     summary_map: true
-    summary_reduce: true   # keywords removed
+    summary_reduce: true  
 
   output_format: json
 
@@ -280,4 +281,5 @@ document_qa_chat:
     contextualize_question_prompt: true
     context_qa_prompt: true
 
-  output_format: json
+  output_format: json 
+

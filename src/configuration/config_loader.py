@@ -36,9 +36,13 @@ class ConfigSchema(BaseModel):
     vectorstores: Dict[str, Any] = Field(default_factory=dict)
     preprocessing: Dict[str, Any] = Field(default_factory=dict)
     splitting_configs: Dict[str, Any] = Field(default_factory=dict)
+    pipeline_chunking_map: Dict[str, str] = Field(default_factory=dict)
+    retrieval: Dict[str, Any] = Field(default_factory=dict)
     document_comparison: Dict[str, Any] = Field(default_factory=dict)
     document_analysis: Dict[str, Any] = Field(default_factory=dict)
     document_qa_chat: Dict[str, Any] = Field(default_factory=dict)
+    logging: Dict[str, Any] = Field(default_factory=dict)
+    cache: Dict[str, Any] = Field(default_factory=dict)  
 
 # --------------------------
 # Config Loader
@@ -167,6 +171,24 @@ class ConfigLoader:
         return self.get(f"splitting_configs.{strategy or self.get('splitting_configs.default_strategy')}", {})
     
     # --------------------------
+    # Retrieval Configuration
+    # --------------------------
+    def get_retrieval_config(self) -> Dict[str, Any]:
+        return self.get("retrieval", {})
+    
+    # --------------------------
+    # Logging Configuration  
+    # --------------------------
+    def get_logging_config(self) -> Dict[str, Any]:
+        return self.get("logging", {})
+    
+    # --------------------------
+    # Cache Configuration
+    # --------------------------
+    def get_cache_config(self) -> Dict[str, Any]:
+        return self.get("cache", {})
+
+    # --------------------------
     # Pipeline-specific chunking
     # --------------------------
     def get_pipeline_chunking_strategy(self, pipeline_name: str) -> str:
@@ -175,7 +197,8 @@ class ConfigLoader:
         If no mapping exists, falls back to default_strategy.
         """
         mapping = self.get("pipeline_chunking_map", {})
-        strategy = mapping.get(pipeline_name, self.get("splitting_configs.default_strategy"))
+        default_strategy = self.get("splitting_configs.default_strategy", "recursive_character")
+        strategy = mapping.get(pipeline_name, default_strategy)
         return strategy
 
 

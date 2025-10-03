@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
-from src.utils.common_utils import ensure_dir, timed
+from src.utils.common_utils import ensure_dir
 
 
 class CommonDocumentLoader:
@@ -52,7 +52,6 @@ class CommonDocumentLoader:
         except Exception as e:
             raise CustomException(f"Failed to import loader for extension '{ext}' ({import_path})", e)
 
-    @timed
     def load_paths(self, paths: Iterable[str | Path]) -> List[Document]:
         docs: List[Document] = []
         for p in paths:
@@ -70,7 +69,6 @@ class CommonDocumentLoader:
             logger.warning("No supported documents found in the provided paths.")
         return docs
 
-    @timed
     def load_directory(self, directory: str | Path | None = None) -> List[Document]:
         directory = Path(directory or self.input_dir)
         if not directory.exists():
@@ -100,7 +98,6 @@ class CommonDocumentLoader:
             logger.error(f"Failed to load directory {directory}: {e}")
             raise CustomException("Failed to load directory", e)
 
-    @timed
     def load_file(self, file_path: str | Path) -> List[Document]:
         file_path = str(file_path)
         ext = Path(file_path).suffix.lower()

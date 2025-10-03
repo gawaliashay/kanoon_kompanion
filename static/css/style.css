@@ -214,20 +214,28 @@ nav a:hover::after {
 .features {
     padding: 5rem 0;
     background-color: #0f0f0f;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
 }
 
 .section-title {
     text-align: center;
     font-family: 'Playfair Display', serif;
-    font-size: 2.5rem;
-    margin-bottom: 3rem;
-    color: #fff;
+    font-size: 5rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: rgb(212, 175, 55);
     position: relative;
 }
 
 .section-title::after {
     content: "";
-    position: absolute;
+    position: sticky;
+    top: 100px;
     bottom: -15px;
     left: 50%;
     transform: translateX(-50%);
@@ -238,14 +246,14 @@ nav a:hover::after {
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.6rem;
 }
 
 .feature-card {
     background: linear-gradient(145deg, #151515, #111);
     border-radius: 8px;
-    padding: 1.5rem;
+    padding: 2.5rem;
     text-align: center;
     transition: all 0.3s ease;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -292,14 +300,34 @@ nav a:hover::after {
     line-height: 1.4;
 }
 
-/* Service Header */
+/* Service Header - FROZEN STICKY - FIXED */
 .service-header {
     background: linear-gradient(145deg, #151515, #111);
     padding: 1rem 0;
     border-bottom: 1px solid #252525;
     position: sticky;
-    top: 70px;
-    z-index: 90;
+    top: 80px; /* Position below main header */
+    z-index: 110; /* Just below main header z-index: 100 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Update responsive top positions */
+@media (max-width: 992px) {
+    .service-header {
+        top: 80px;
+    }
+}
+
+@media (max-width: 768px) {
+    .service-header {
+        top: 80px;
+    }
+}
+
+@media (max-width: 576px) {
+    .service-header {
+        top: 80px;
+    }
 }
 
 .service-subtitle {
@@ -321,6 +349,7 @@ nav a:hover::after {
     display: block;
     animation: fadeIn 0.5s ease;
 }
+
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
@@ -498,6 +527,13 @@ nav a:hover::after {
     padding: 0;
 }
 
+.file-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-align: left;
+    margin-top: 5px;
+}
+
 .file-list li {
     padding: 0.3rem 0.5rem;
     border-bottom: 1px solid #333;
@@ -552,7 +588,7 @@ nav a:hover::after {
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-    max-height: calc(70vh - 120px);
+    max-height: calc(50vh - 120px);
 }
 
 .message {
@@ -566,15 +602,37 @@ nav a:hover::after {
 }
 
 .user-message {
-    background-color: #2a2a2a;
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
     margin-left: auto;
     border: 1px solid #444;
+    border-left: 3px solid #d4af37;
 }
 
+
+
 .bot-message {
-    background-color: #333;
+    background: linear-gradient(135deg, #333, #222);
     margin-right: auto;
+    border: 1px solid #444;
     border-left: 3px solid #d4af37;
+}
+
+.system-message {
+    background: linear-gradient(135deg, #1a2a3a, #0f1a26);
+    margin: 10px auto;
+    max-width: 85% !important;
+    border: 1px solid #2a4a6a;
+    border-left: 4px solid #2196f3;
+}
+
+.system-message .message-content {
+    color: #90caf9;
+    font-style: italic;
+}
+
+.system-message .message-content i {
+    margin-right: 8px;
+    color: #2196f3;
 }
 
 .message-time {
@@ -594,6 +652,13 @@ nav a:hover::after {
     margin-bottom: 0.5rem;
 }
 
+#chat-file-names {
+    font-family: 'Poppins', sans-serif; /* Or any font you prefer */
+    font-size: 0.7rem;
+    color: #888;
+    font-style: italic;
+}
+
 .file-upload-label {
     display: flex;
     align-items: center;
@@ -602,10 +667,16 @@ nav a:hover::after {
     font-size: 0.8rem;
     cursor: pointer;
     transition: color 0.3s ease;
+    padding: 0.8rem;
+    border: 2px dashed #444;
+    border-radius: 4px;
+    background: #1a1a1a;
 }
 
 .file-upload-label:hover {
     color: #b8941f;
+    border-color: #d4af37;
+    background: #222;
 }
 
 .ds-icon {
@@ -621,6 +692,10 @@ nav a:hover::after {
 .chat-file-preview {
     display: none;
     margin-bottom: 0.5rem;
+    padding: 0.8rem;
+    background: #1a1a1a;
+    border-radius: 4px;
+    border: 1px solid #333;
 }
 
 .chat-file-item {
@@ -630,6 +705,11 @@ nav a:hover::after {
     display: flex;
     justify-content: space-between;
     font-style: italic;
+    border-bottom: 1px solid #333;
+}
+
+.chat-file-item:last-child {
+    border-bottom: none;
 }
 
 .chat-input {
@@ -657,6 +737,52 @@ nav a:hover::after {
     font-weight: 600;
     cursor: pointer;
     font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.chat-input button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4);
+}
+
+.chat-input button:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Chat Actions */
+.chat-actions {
+    display: flex;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.chat-actions button {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #000;
+    padding: 0.3rem 0.3rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chat-actions button:hover {
+    transform: translateY(-1px);
+}
+
+.session-info {
+    font-size: 0.7rem;
+    color: #888;
+    text-align: center;
+    margin-top: 5px;
+    padding: 0.3rem;
+    background: #1a1a1a;
+    border-radius: 4px;
+    border: 1px solid #333;
 }
 
 /* Footer */
@@ -699,7 +825,7 @@ footer {
     position: relative;
 }
 
-.footer-links h4::after {
+.foote.service-headerr-links h4::after {
     content: "";
     position: absolute;
     bottom: -6px;
@@ -736,37 +862,35 @@ footer {
     font-size: 0.8rem;
 }
 
-/* Notification toast */
+/* ===== TOAST NOTIFICATION ===== */
 .toast {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 0.8rem 1.2rem;
-    background: #333;
-    color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    top: 100px;
+    right: 30px;
+    background: #fff;
+    color: #333;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    transform: translateY(100px);
+    gap: 10px;
+    transform: translateX(400px);
     opacity: 0;
     transition: all 0.3s ease;
-    font-size: 0.9rem;
+    border-left: 4px solid #4CAF50;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .toast.show {
-    transform: translateY(0);
+    transform: translateX(0);
     opacity: 1;
 }
 
-.toast.success {
-    border-left: 4px solid #4caf50;
-}
-
-.toast.error {
-    border-left: 4px solid #f44336;
+.toast i {
+    font-size: 18px;
 }
 
 /* Responsive Design */
@@ -841,7 +965,7 @@ footer {
 
     .feature-card {
         height: auto;
-        padding: 1.2rem;
+        padding: 2.2rem;
     }
 
     .footer-content {
@@ -858,11 +982,15 @@ footer {
     }
 
     .service-subtitle {
-        font-size: 1.2rem;
+        font-size: 4.2rem;
     }
     
     .service-header {
         top: 110px;
+    }
+
+    .chat-actions {
+        flex-direction: column;
     }
 }
 
@@ -888,7 +1016,7 @@ footer {
     }
 
     .feature-card h3 {
-        font-size: 1.1rem;
+        font-size: 2rem;
     }
 
     .feature-card p {

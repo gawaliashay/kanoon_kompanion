@@ -15,7 +15,6 @@ from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
 from src.configuration.prompts_loader import prompts
 from src.components.model_loader import ModelFactory
-from src.utils.common_utils import timed
 
 
 class DocumentComparisonPipeline:
@@ -78,7 +77,6 @@ class DocumentComparisonPipeline:
             logger.error(f"Failed to initialize DocumentComparisonPipeline: {e}")
             raise CustomException("Pipeline initialization failed", e)
 
-    @timed
     def run_comparison(
         self,
         file_paths_a: List[str] | None = None,

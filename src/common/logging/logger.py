@@ -1,6 +1,9 @@
+# src\common\logging\logger.py
+
 import os
 import sys
 import logging
+import re
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from typing import Optional
@@ -11,6 +14,102 @@ import structlog
 # - LOG_JSON=0 => disable JSON renderer (not recommended for prod)
 LOG_CONSOLE_DEV = os.getenv("LOG_CONSOLE_DEV", "0") == "1"
 LOG_JSON = os.getenv("LOG_JSON", "1") != "0"
+
+
+class SensitiveDataProcessor:
+    """Processor to mask sensitive data in logs - shows only keys, not values"""
+    
+    def __init__(self):
+        # Patterns to match sensitive key-value pairs
+        self.sensitive_patterns = [
+            # API keys in config
+            r'api_key[\'"]?\s*:\s*[\'"][^\'"]+[\'"]',
+            r'api_key\s*=\s*[^\s,]+',
+            # Environment variables
+            r'OPENAI_API_KEY=[^\s]+',
+            r'MISTRAL_API_KEY=[^\s]+', 
+            r'GROQ_API_KEY=[^\s]+',
+            r'PINECONE_API_KEY=[^\s]+',
+            r'HUGGINGFACEHUB_API_TOKEN=[^\s]+',
+            r'GOOGLE_API_KEY=[^\s]+',
+            r'S3_BUCKET=[^\s]+',
+            # Secret strings in messages
+            r'secret[\'"]?\s*:\s*[\'"][^\'"]+[\'"]',
+            r'token[\'"]?\s*:\s*[\'"][^\'"]+[\'"]',
+            r'password[\'"]?\s*:\s*[\'"][^\'"]+[\'"]',
+            r'key[\'"]?\s*:\s*[\'"][^\'"]+[\'"]',
+        ]
+        
+        # Keys to mask in event_dict (structlog context)
+        self.sensitive_keys = {
+            'api_key', 'api_secret', 'secret', 'token', 'password', 'key',
+            'mistral_api_key', 'openai_api_key', 'groq_api_key', 
+            'pinecone_api_key', 'huggingfacehub_api_token', 'google_api_key'
+        }
+    
+    def __call__(self, logger, method_name, event_dict):
+        # Mask sensitive values in the event message
+        if 'event' in event_dict and event_dict['event']:
+            event_dict['event'] = self._mask_sensitive_string(str(event_dict['event']))
+        
+        # Mask sensitive keys in the event_dict context
+        for key in list(event_dict.keys()):
+            if key in self.sensitive_keys:
+                event_dict[key] = '[MASKED]'
+            elif isinstance(event_dict[key], str):
+                event_dict[key] = self._mask_sensitive_string(event_dict[key])
+            elif isinstance(event_dict[key], dict):
+                event_dict[key] = self._mask_sensitive_dict(event_dict[key])
+        
+        return event_dict
+    
+    def _mask_sensitive_string(self, text):
+        """Mask sensitive data in string messages"""
+        for pattern in self.sensitive_patterns:
+            text = re.sub(pattern, self._mask_replacement, text)
+        return text
+    
+    def _mask_sensitive_dict(self, obj):
+        """Recursively mask sensitive data in dictionaries"""
+        if not isinstance(obj, dict):
+            return obj
+            
+        masked = {}
+        for key, value in obj.items():
+            if key in self.sensitive_keys:
+                masked[key] = '[MASKED]'
+            elif isinstance(value, str):
+                masked[key] = self._mask_sensitive_string(value)
+            elif isinstance(value, dict):
+                masked[key] = self._mask_sensitive_dict(value)
+            elif isinstance(value, list):
+                masked[key] = [self._mask_sensitive_dict(item) if isinstance(item, dict) 
+                              else self._mask_sensitive_string(item) if isinstance(item, str) 
+                              else item for item in value]
+            else:
+                masked[key] = value
+        return masked
+    
+    def _mask_replacement(self, match):
+        """Replace sensitive values with masked indicators"""
+        matched_text = match.group(0)
+        
+        # For key=value patterns, keep key but mask value
+        if '=' in matched_text:
+            key, value = matched_text.split('=', 1)
+            # Show that the key exists but mask the value
+            return f"{key}=[MASKED]"
+        # For key: value patterns in JSON/dict
+        elif ':' in matched_text:
+            parts = matched_text.split(':', 1)
+            if len(parts) == 2:
+                return f"{parts[0]}:[MASKED]"
+        
+        # For other patterns, show key exists but mask everything else
+        if any(keyword in matched_text.lower() for keyword in ['api_key', 'secret', 'token', 'password']):
+            return re.sub(r'[\'"][^\'"]+[\'"]', "'[MASKED]'", matched_text)
+        
+        return '[MASKED]'
 
 
 class CustomLogger:
@@ -119,6 +218,9 @@ class CustomLogger:
 
             return event_dict
 
+        # ✅ ADD SENSITIVE DATA PROCESSOR HERE
+        sensitive_processor = SensitiveDataProcessor()
+
         # --- Renderer ---
         if LOG_CONSOLE_DEV and not LOG_JSON:
             renderer = structlog.dev.ConsoleRenderer()
@@ -132,6 +234,7 @@ class CustomLogger:
                 *pre_chain,
                 structlog.processors.format_exc_info,
                 conditional_callsite,
+                sensitive_processor,  # ✅ ADDED: Mask sensitive data before rendering
                 key_order_processor,
                 renderer,
             ],
@@ -140,7 +243,6 @@ class CustomLogger:
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-
 
     def get_logger(self, name: Optional[str] = None) -> structlog.BoundLogger:
         return structlog.get_logger(name or __name__)

@@ -1,4 +1,5 @@
-# api/app.py
+# api\app.py
+
 from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,10 +7,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import uuid
-import json
+from pathlib import Path
+from datetime import datetime
 
-from api.config import settings
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 
@@ -18,23 +18,24 @@ from src.components.document_analysis.document_analysis_pipeline import Document
 from src.components.document_comparison.document_comparison_pipeline import DocumentComparisonPipeline
 from src.components.document_qa_chat.document_qa_chat_pipeline import create_document_qa_chat_pipeline
 
-# Updated session manager
-from api.session_manager import save_uploaded_files, save_conversation, get_conversations, save_analysis_result, save_comparison_result
+# Storage / Session managers
+from storage_manager.file_manager import (
+    save_uploaded_files,
+    save_analysis_result,
+    save_comparison_result,
+    save_conversation_file,
+    load_conversation_file,
+)
 
 # ----------------------------
 # Initialize FastAPI
 # ----------------------------
-app = FastAPI(
-    title=settings.project_name,
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+app = FastAPI(title="Document Processing API", version="1.0.0")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +52,7 @@ qa_chat_pipeline = create_document_qa_chat_pipeline()
 
 # Active sessions per client IP
 user_sessions: dict[str, int] = {}
+conversation_cache: dict[str, list] = {}  # cache per client until END
 
 # ----------------------------
 # Response Model
@@ -59,15 +61,6 @@ class APIResponse(BaseModel):
     success: bool
     result: Optional[dict] = None
     error: Optional[str] = None
-
-
-# ----------------------------
-# Health Check (for ALB)
-# ----------------------------
-@app.get("/health", tags=["Health"])
-async def health_check():
-    return {"status": "healthy", "service": settings.project_name}
-
 
 # ----------------------------
 # Welcome
@@ -81,8 +74,7 @@ async def api_welcome():
     return APIResponse(
         success=True,
         result={
-            "message": f"Welcome to {settings.project_name}",
-            "environment": settings.environment,
+            "message": "🚀 Welcome to Document Processing API",
             "routes": {
                 "Document Analysis": "/document_analysis",
                 "Document Comparison": "/document_comparison",
@@ -90,7 +82,6 @@ async def api_welcome():
             },
         },
     )
-
 
 # ----------------------------
 # Document Analysis
@@ -100,53 +91,26 @@ async def document_analysis(files: List[UploadFile] = File(...)):
     try:
         if not files:
             raise HTTPException(status_code=400, detail="No files uploaded")
-        
-        # Read file contents and prepare for S3 upload
-        file_contents = []
-        for file in files:
-            content = await file.read()
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            file_contents.append((unique_filename, content))
 
-        # Save files to S3 and get session number
-        session_number = save_uploaded_files("document_analysis", file_contents)
-        uploaded_files = [f[0] for f in file_contents]
+        session_dir = save_uploaded_files("document_analysis", files)
+        uploaded_files = [f.name for f in session_dir.iterdir() if f.is_file()]
 
-        # Process files - you'll need to adapt your pipelines to work with S3
-        # For now, using temporary files (not ideal for production)
-        import tempfile
-        import os
-        tmp_files = []
-        for filename, content in file_contents:
-            tmp_path = os.path.join(tempfile.gettempdir(), filename)
-            with open(tmp_path, 'wb') as f:
-                f.write(content)
-            tmp_files.append(tmp_path)
+        result = analysis_pipeline.run_analysis([str(f) for f in session_dir.iterdir() if f.is_file()])
 
-        result = analysis_pipeline.run_analysis(tmp_files)
-
-        # Cleanup temp files
-        for tmp_file in tmp_files:
-            try:
-                os.unlink(tmp_file)
-            except:
-                pass
-
-        # Save analysis result
+        session_number = int(session_dir.name.split("_")[1])
         save_analysis_result("document_analysis", session_number, result, uploaded_files)
 
         return APIResponse(success=True, result={
-            "session": session_number,
+            "session": str(session_dir),
             "uploaded_files": uploaded_files,
             "analysis": result
         })
     except Exception as e:
         logger.error(f"Document analysis error: {str(e)}")
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content=APIResponse(success=False, error=str(e)).dict()
         )
-
 
 # ----------------------------
 # Document Comparison
@@ -159,141 +123,210 @@ async def document_comparison(
     try:
         if not files_a or not files_b:
             raise HTTPException(status_code=400, detail="Both file sets are required")
-        
-        # Read file contents
-        all_files = []
-        for file in files_a:
-            content = await file.read()
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            all_files.append((unique_filename, content))
-        
-        for file in files_b:
-            content = await file.read()
-            unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-            all_files.append((unique_filename, content))
 
-        # Save files to S3 with comparison structure
-        session_number = save_uploaded_files("document_comparison", all_files, comparison=True)
-        
-        doc1_files = [f[0] for f in all_files[:len(all_files)//2]]
-        doc2_files = [f[0] for f in all_files[len(all_files)//2:]]
+        session_dir = save_uploaded_files(
+            "document_comparison",
+            files_a + files_b,
+            comparison=True
+        )
 
-        # Process files (adapt your pipeline for S3)
-        import tempfile
-        import os
-        tmp_files_a = []
-        tmp_files_b = []
-        
-        for i, (filename, content) in enumerate(all_files):
-            tmp_path = os.path.join(tempfile.gettempdir(), filename)
-            with open(tmp_path, 'wb') as f:
-                f.write(content)
-            if i < len(all_files)//2:
-                tmp_files_a.append(tmp_path)
-            else:
-                tmp_files_b.append(tmp_path)
+        doc1_dir = session_dir / "doc1"
+        doc2_dir = session_dir / "doc2"
 
-        result = comparison_pipeline.run_comparison(tmp_files_a, tmp_files_b)
+        doc1_files = [f.name for f in doc1_dir.iterdir() if f.is_file()]
+        doc2_files = [f.name for f in doc2_dir.iterdir() if f.is_file()]
 
-        # Cleanup
-        for tmp_file in tmp_files_a + tmp_files_b:
-            try:
-                os.unlink(tmp_file)
-            except:
-                pass
+        result = comparison_pipeline.run_comparison(
+            [str(f) for f in doc1_dir.iterdir() if f.is_file()],
+            [str(f) for f in doc2_dir.iterdir() if f.is_file()]
+        )
 
-        # Save comparison result
+        session_number = int(session_dir.name.split("_")[1])
         save_comparison_result("document_comparison", session_number, result, doc1_files, doc2_files)
 
         return APIResponse(success=True, result={
-            "session": session_number,
+            "session": str(session_dir),
             "uploaded_files": {"doc1": doc1_files, "doc2": doc2_files},
             "comparison": result
         })
     except Exception as e:
         logger.error(f"Document comparison error: {str(e)}")
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content=APIResponse(success=False, error=str(e)).dict()
         )
 
+# ----------------------------
+# Document QA Chat - FIXED
+# ----------------------------
+from pydantic import BaseModel
+from typing import Optional, List
 
-# ----------------------------
-# Document QA Chat
-# ----------------------------
+class ChatRequest(BaseModel):
+    question: Optional[str] = None
+    files: List[str] = []  # This will be handled separately for file uploads
+
 @app.post("/document_qa_chat", response_model=APIResponse, tags=["Document QA Chat"])
 async def document_qa_chat(
     request: Request,
-    question: str = Form(...),
+    question: Optional[str] = Form(None),
     files: List[UploadFile] = File(None)
 ):
     client_id = request.client.host
+    logger.info(f"QA Chat request from {client_id}: question={question}, files={files}")
 
     try:
-        uploaded_files = []
-        session_number = None
-
+        # -----------------------------------
+        # Step 1: Handle new document upload
+        # -----------------------------------
         if files and len(files) > 0:
-            # Read file contents
-            file_contents = []
-            for file in files:
-                content = await file.read()
-                unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
-                file_contents.append((unique_filename, content))
+            logger.info(f"Processing file upload: {[f.filename for f in files]}")
+            
+            # Check if user already has an active session
+            existing_session = user_sessions.get(client_id)
+            if existing_session is not None:
+                # Save existing conversation before starting new session
+                old_history = conversation_cache.pop(client_id, [])
+                if old_history:
+                    save_conversation_file("document_qa_chat", existing_session, old_history)
 
-            # Save files to S3
-            session_number = save_uploaded_files("document_qa_chat", file_contents)
-            uploaded_files = [f[0] for f in file_contents]
+            # Create a new session for this document upload
+            session_dir = save_uploaded_files("document_qa_chat", files)
+            session_number = int(session_dir.name.split("_")[1])
             user_sessions[client_id] = session_number
 
-            # Process files (adapt your pipeline)
-            import tempfile
-            import os
-            tmp_files = []
-            for filename, content in file_contents:
-                tmp_path = os.path.join(tempfile.gettempdir(), filename)
-                with open(tmp_path, 'wb') as f:
-                    f.write(content)
-                tmp_files.append(tmp_path)
+            uploaded_doc_paths = [str(f) for f in session_dir.iterdir() if f.is_file()]
+            uploaded_files_names = [Path(f).name for f in uploaded_doc_paths]
 
-            # Ingest new docs
-            qa_chat_pipeline.ingest_new_documents(tmp_files)
+            # Ingest the new documents
+            qa_chat_pipeline.ingest_new_documents(uploaded_doc_paths)
 
-            # Cleanup
-            for tmp_file in tmp_files:
-                try:
-                    os.unlink(tmp_file)
-                except:
-                    pass
-        else:
-            # Continue existing session
-            session_number = user_sessions.get(client_id)
-            if session_number is None:
-                return JSONResponse(
-                    status_code=400,
-                    content=APIResponse(success=False, error="Please upload documents first.").dict()
-                )
+            # Initialize conversation cache for this session
+            conversation_cache[client_id] = [{
+                "timestamp": datetime.utcnow().isoformat(),
+                "type": "document_upload",
+                "uploaded_files": uploaded_files_names,
+                "message": "Documents uploaded successfully"
+            }]
 
-        # Query pipeline
+            return APIResponse(
+                success=True,
+                result={
+                    "session": session_number,
+                    "uploaded_files": uploaded_files_names,
+                    "message": "Documents uploaded and session started",
+                    "conversation_history": conversation_cache[client_id]
+                }
+            )
+
+        # -----------------------------------
+        # Step 2: Handle question query
+        # -----------------------------------
+        if not question:
+            return JSONResponse(
+                status_code=422,
+                content=APIResponse(success=False, error="Question is required when no files are provided").dict()
+            )
+
+        session_number = user_sessions.get(client_id)
+        if session_number is None:
+            return JSONResponse(
+                status_code=400,
+                content=APIResponse(success=False, error="Please upload documents first.").dict()
+            )
+
+        # Query the pipeline
         result = qa_chat_pipeline.query(question)
+        answer = result.get("answer", "I'm sorry, I couldn't process your question.")
 
-        # Save chat
-        if result.get("success"):
-            save_conversation("document_qa_chat", session_number, question, result.get("answer"), uploaded_files)
-
-        # Full history
-        history = get_conversations("document_qa_chat", session_number)
-
-        return APIResponse(success=True, result={
-            "session": session_number,
-            "uploaded_files": uploaded_files,
-            "latest_answer": result.get("answer"),
-            "conversation_history": history
+        # Append to conversation cache
+        conversation_cache.setdefault(client_id, []).append({
+            # "timestamp": datetime.utcnow().isoformat(),
+            # "type": "qa",
+            "question": question,
+            "answer": answer
         })
 
-    except Exception as e:
-        logger.error(f"QA chat error: {str(e)}")
-        return JSONResponse(
-            status_code=500, 
-            content=APIResponse(success=False, error=str(e)).dict()
+        return APIResponse(
+            success=True,
+            result={
+                "session": session_number,
+                "latest_answer": answer,
+                "conversation_history": conversation_cache[client_id]
+            }
         )
+
+    except Exception as e:
+        logger.error(f"QA chat error: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content=APIResponse(success=False, error=f"Internal server error: {str(e)}").dict()
+        )
+
+# ----------------------------
+# Get Current Chat Session - FIXED
+# ----------------------------
+@app.get("/document_qa_chat/session", response_model=APIResponse, tags=["Document QA Chat"])
+async def get_current_session(request: Request):
+    """Get current active session and conversation history"""
+    client_id = request.client.host
+    session_number = user_sessions.get(client_id)
+    
+    if session_number is None:
+        return APIResponse(
+            success=False, 
+            error="No active session",
+            result={"session": None, "conversation_history": []}
+        )
+    
+    history = conversation_cache.get(client_id, [])
+    
+    return APIResponse(
+        success=True,
+        result={
+            "session": session_number,
+            "conversation_history": history
+        }
+    )
+
+# ----------------------------
+# End QA Chat - FIXED
+# ----------------------------
+@app.post("/document_qa_chat/end", response_model=APIResponse, tags=["Document QA Chat"])
+async def end_chat(request: Request):
+    client_id = request.client.host
+    session_number = user_sessions.pop(client_id, None)
+
+    if session_number is None:
+        return APIResponse(success=False, error="No active session to end")
+
+    history = conversation_cache.pop(client_id, [])
+    if history:
+        save_conversation_file("document_qa_chat", session_number, history)
+
+    return APIResponse(
+        success=True,
+        result={
+            "message": "Chat session ended and conversation saved",
+            "session": session_number,
+            "conversation_history": history
+        }
+    )
+
+# ----------------------------
+# Clear Chat Session (for testing) - FIXED
+# ----------------------------
+@app.post("/document_qa_chat/clear", response_model=APIResponse, tags=["Document QA Chat"])
+async def clear_chat_session(request: Request):
+    """Clear current chat session"""
+    client_id = request.client.host
+    session_number = user_sessions.pop(client_id, None)
+    conversation_cache.pop(client_id, None)
+    
+    return APIResponse(
+        success=True,
+        result={
+            "message": "Chat session cleared",
+            "session": session_number
+        }
+    )

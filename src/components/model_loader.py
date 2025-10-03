@@ -6,7 +6,6 @@ from typing import Any, Dict
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
-from src.utils.common_utils import timed
 
 
 # Generic to provider key mapping
@@ -23,11 +22,9 @@ class ModelFactory:
     def __init__(self, config_loader=config):
         self.config = config_loader
 
-    @timed
     def load_llm(self, name: str = None) -> Any:
         return self._load_model(self.config.get_llm_config(name), "LLM", name)
 
-    @timed
     def load_embedding(self, name: str = None) -> Any:
         return self._load_model(self.config.get_embedding_config(name), "Embedding", name)
 

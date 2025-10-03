@@ -1,0 +1,27 @@
+[
+  {
+    "timestamp": "2025-10-03T21:22:00.927235",
+    "type": "document_upload",
+    "uploaded_files": [
+      "Sale Deed1.pdf",
+      "Sale Deed2.pdf"
+    ],
+    "message": "Documents uploaded successfully"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello! How can I assist you today? I don't know if you have a specific question in mind, but I'm here to help with any questions you have based on the provided context. Let me know if you need information about the sale deeds for Property A or Property B, their owners, buyers, or any other details."
+  },
+  {
+    "question": "tell me witness name",
+    "answer": "From Document 3, the witnesses are Mr. Sunil Verma and Ms. Kavita Sharma. From Document 4, the witnesses are Mr. Anil Kumar and Ms. Priya Singh. From Document 5, the names of the witnesses are not mentioned."
+  },
+  {
+    "question": "tell me owners name",
+    "answer": "The owners' names are:\n\n1. For Property A: Mr. Rajesh Sharma (seller) and Ms. Ananya Verma (buyer)\n2. For Property B: Mr. Sanjay Gupta (seller) and Mr. Rohit Mehta (buyer)\n\nPlease note that these are the names of the parties mentioned in the sale deeds provided in the context."
+  },
+  {
+    "question": "tell me amount",
+    "answer": "The amount for the property in the first sale deed (Sale Deed1.pdf) is ₹1,50,00,000 (rupees one crore fifty lakh only) and for the second sale deed (Sale Deed2.pdf) is ₹2,00,00,000 (rupees two crore only)."
+  }
+]

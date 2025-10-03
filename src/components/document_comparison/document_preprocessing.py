@@ -8,7 +8,6 @@ from src.utils.preprocessing_utils import DocumentPreprocessor
 from src.components.document_chunker import ChunkingUtility
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
-from src.utils.common_utils import timed
 
 
 class ComparisonPreprocessingPipeline:
@@ -22,8 +21,7 @@ class ComparisonPreprocessingPipeline:
         self.preprocessor = DocumentPreprocessor(self.preproc_cfg)
         self.chunker = ChunkingUtility("document_comparison")
         logger.info(f"ComparisonPreprocessingPipeline initialized. preproc_cfg={self.preproc_cfg}")
-
-    @timed
+    
     def run_single(self, documents: List[Document]) -> List[Document]:
         """Preprocess and chunk a single document set."""
         if not documents:
@@ -38,7 +36,6 @@ class ComparisonPreprocessingPipeline:
             logger.error(f"Single document preprocessing failed: {e}")
             raise CustomException("Single document preprocessing failed", e)
 
-    @timed
     def run_pair(
         self, docs1: List[Document], docs2: List[Document]
     ) -> Tuple[List[Document], List[Document]]:

@@ -5,16 +5,15 @@ import importlib
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
 from src.configuration.config_loader import config
-from src.utils.common_utils import timed
 
 
 class RAGUtils:
     """Utilities for text splitting, vectorstore loading, and retrieval."""
 
     def __init__(self, config_loader=config):
-        self.config = config_loader
+        self.config = config_loader  # This is fine - it's actually storing config_loader
 
-    @timed
+    
     def get_text_splitter(self, pipeline_name: str = None) -> Any:
         """
         Returns a text splitter configured per pipeline via config.yaml.
@@ -41,7 +40,7 @@ class RAGUtils:
         except Exception as e:
             raise CustomException("Failed to initialize text splitter", e)
 
-    @timed
+    
     def build_vectorstore(self, documents: List[Any], embedding: Any, name: str = None) -> Any:
         try:
             vs_name = name or self.config.get("vectorstores.default")
@@ -65,8 +64,7 @@ class RAGUtils:
         except Exception as e:
             raise CustomException("Failed to build vectorstore", e)
 
-
-    @timed
+    
     def get_retriever(self, vectorstore: Any) -> Any:
         try:
             retr_cfg = self.config.get("retrieval") or {}  # fallback if missing
@@ -76,4 +74,3 @@ class RAGUtils:
             return vectorstore.as_retriever(search_type=search_type, search_kwargs={"k": top_k})
         except Exception as e:
             raise CustomException("Failed to get retriever", e)
-

@@ -15,8 +15,16 @@
 <body>
     <!-- Toast notification -->
     <div id="toast" class="toast">
-        <i class="fas fa-check-circle"></i>
-        <span id="toast-message"></span>
+        <div class="toast-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="toast-content">
+            <div class="toast-message" id="toast-message"></div>
+            <div class="toast-type" id="toast-type">Success</div>
+        </div>
+        <button class="toast-close" onclick="hideToast()">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
 
     <!-- Header -->
@@ -56,8 +64,8 @@
 
     <!-- Features Grid -->
     <section class="features" id="services-section">
-        <div class="container">
-            <h2 class="section-title">Our Services</h2>
+        <div class="container">            
+            <h1 class="section-title">Our Services</h1>
             <div class="features-grid">
                 <div class="feature-card" onclick="showService('document-analysis')">
                     <div class="feature-icon">📄</div>
@@ -171,37 +179,64 @@
         </div>
         <div class="container">
             <div class="form-container">
-                <div class="chat-layout">
-                    <div class="chat-main">
-                        <div class="chat-messages" id="chat-messages">
-                            <div class="message bot-message">
-                                <div>Hello! I'm your कानून-DocChatbot. Upload Your documents to get started.</div>
-                                <div class="message-time" id="current-time"></div>
-                            </div>
-                        </div>
-                        <div class="chat-input-container">
-                            <div class="chat-file-upload">
-                                <label for="chat-files" class="file-upload-label">
-                                    <div class="ds-icon">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M5.5498 9.75006V5.00006H6.9502V9.75006C6.9502 10.33 7.4201 10.7999 8 10.7999C8.5799 10.7999 9.0498 10.33 9.0498 9.75006V4.50006C9.0498 2.95366 7.7964 1.70026 6.25 1.70026C4.7036 1.70026 3.4502 2.95366 3.4502 4.50006V9.75006C3.4502 12.263 5.4871 14.2999 8 14.2999C10.5129 14.2999 12.5498 12.263 12.5498 9.75006V4.00006H13.9502V9.75006C13.9502 13.0362 11.2861 15.7003 8 15.7003C4.71391 15.7003 2.0498 13.0362 2.0498 9.75006V4.50006C2.04981 2.18047 3.9304 0.299867 6.25 0.299866C8.5696 0.299866 10.4502 2.18046 10.4502 4.50006V9.75006C10.4502 11.1032 9.3531 12.2003 8 12.2003C6.6469 12.2003 5.5498 11.1032 5.5498 9.75006Z" fill="currentColor"></path>
-                                        </svg>
-                                    </div>
-                                    <span>Choose File</span>
-                                    <span id="chat-file-name" style="margin-left: 8px; color: #888; font-size: 0.8rem;">No file chosen</span>
-                                </label>
-                                <input type="file" id="chat-files" name="files" multiple accept=".pdf,.doc,.docx,.txt" onchange="previewChatFiles()" style="display: none;" />
-                                <div class="session-note" style="font-size: 0.7rem; color: #888; margin-top: 5px;">
-                                    Note: All old session history will be erased.
+                <!-- Initial Upload Section (Visible by default) -->
+                <div id="chat-upload-section">
+                    <form id="chat-upload-form" enctype="multipart/form-data" autocomplete="off">
+                        <div class="form-group">
+                            <label for="chat-files">Upload Legal Documents (PDF, DOC, DOCX, TXT)</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="chat-files" name="files" multiple accept=".pdf,.doc,.docx,.txt" />
+                                <div class="file-input-display">
+                                    <i class="fas fa-paperclip"></i>
+                                    <span id="chat-file-names">No file chosen</span>
                                 </div>
                             </div>
-                            <div id="chat-file-preview" class="chat-file-preview"></div>
-                            <div id="chat-upload-status" class="upload-status" style="display: none;"></div>
-                            <div class="chat-input">
-                                <input type="text" id="chat-input" placeholder="Ask a question about your documents..." onkeypress="handleChatKeypress(event)" autocomplete="off"/>
-                                <button onclick="sendChatMessage()" id="chat-send-btn">
+                        </div>
+                        <div id="chat-upload-status" class="upload-status" style="display: none;"></div>
+                        <div class="loader" id="chat-upload-loader"></div>
+                        <button type="submit" class="submit-btn" id="chat-upload-btn">
+                            <i class="fas fa-robot"></i> Chat with Documents
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Chat Interface (Hidden until documents uploaded) -->
+                <div id="chat-interface" style="display: none;">
+                    <div class="chat-header">
+                        <h2>Chat Session</h2>
+                        <div class="uploaded-files-info">
+                            <span class="file-label">Uploaded Files:</span>
+                            <span id="active-files-list"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-layout">
+                        <div class="chat-main">
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="message bot-message">
+                                    <div>Hello! I'm your कानून-DocChatbot. I've analyzed your documents and I'm ready to answer your questions.</div>
+                                    <div class="message-time" id="current-time"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="chat-input-container">
+                                <div class="chat-input">
+                                    <input type="text" id="chat-input" placeholder="Ask a question about your documents..." onkeypress="handleChatKeypress(event)" autocomplete="off"/>
+                                    <button onclick="sendChatMessage()" id="chat-send-btn">
                                     <i class="fas fa-paper-plane"></i> Send
                                 </button>
+                                </div>
+                                <div class="chat-actions">
+                                    <button onclick="saveAndEndChat()" class="submit-btn" style="background: #b8941f;">
+                                        <i class="fas fa-save"></i> Save & End
+                                    </button>
+                                    <button onclick="clearChatSession()" class="submit-btn" style="background: #b8941f;">
+                                        <i class="fas fa-trash"></i> Clear Session
+                                    </button>
+                                </div>
+                                <div class="session-info">
+                                    Session: <span id="current-session-id">None</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -209,7 +244,7 @@
             </div>
         </div>
     </section>
-
+    
     <!-- Ask Anything Service -->
     <section id="ask-anything" class="service-section">
         <div class="service-header">

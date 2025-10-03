@@ -9,7 +9,6 @@ from src.utils.preprocessing_utils import DocumentPreprocessor
 from src.components.document_chunker import ChunkingUtility
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
-from src.utils.common_utils import timed
 
 
 class DocumentPreprocessingPipeline:
@@ -21,7 +20,6 @@ class DocumentPreprocessingPipeline:
         self.chunker = ChunkingUtility("document_analysis")  # Config-driven chunker
         logger.info(f"DocumentPreprocessingPipeline initialized. preproc_cfg={self.preproc_cfg}")
 
-    @timed
     def run(self, documents: List[Document]) -> List[Document]:
         """Preprocess and chunk documents."""
         if not documents:

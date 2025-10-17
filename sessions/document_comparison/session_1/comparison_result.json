@@ -1,0 +1,57 @@
+{
+  "doc1_files": [
+    "Rental Agreement 1.docx"
+  ],
+  "doc2_files": [
+    "Rental Agreement 3.docx"
+  ],
+  "comparison_result": {
+    "strategy": "chunkwise",
+    "comparisons": [
+      {
+        "similarities": [
+          "Both documents are rental agreements for residential properties",
+          "Both documents specify the rent amount and maintenance charges",
+          "Both documents have a security deposit mentioned"
+        ],
+        "differences": [
+          "Doc 1 is in Pune while Doc 2 is in Mumbai",
+          "Doc 1 rent is \u20b925,000 per month, while Doc 2 rent is \u20b960,000 per month",
+          "Doc 1 maintenance is \u20b92,000 per month, while Doc 2 maintenance is \u20b95,000 per month",
+          "Doc 1 security deposit is \u20b975,000, while Doc 2 security deposit is \u20b92,00,000",
+          "Different witnesses for each document"
+        ],
+        "unique_doc1": [
+          "Tenant in Doc 1 is Ms. Priya Nair, a software engineer at Infosys Pune",
+          "Property address in Doc 1 is flat no. 302, Rose Residency, Baner, Pune \u2013 411045"
+        ],
+        "unique_doc2": [
+          "Tenant in Doc 2 is Mr. Rahul Desai, a banker at HDFC Bank",
+          "Property address in Doc 2 is flat no. 502, Ocean Heights, Andheri West, Mumbai \u2013 400053"
+        ]
+      }
+    ],
+    "summary": {
+      "similarities": [
+        "Both documents are rental agreements for residential properties",
+        "Both documents specify the rent amount and maintenance charges",
+        "Both documents have a security deposit mentioned"
+      ],
+      "differences": [
+        "Doc 1 is in Pune while Doc 2 is in Mumbai",
+        "Doc 1 rent is \u20b925,000 per month, while Doc 2 rent is \u20b960,000 per month",
+        "Doc 1 maintenance is \u20b92,000 per month, while Doc 2 maintenance is \u20b95,000 per month",
+        "Doc 1 security deposit is \u20b975,000, while Doc 2 security deposit is \u20b92,00,000",
+        "Different witnesses for each document"
+      ],
+      "unique_doc1": [
+        "Tenant in Doc 1 is Ms. Priya Nair, a software engineer at Infosys Pune",
+        "Property address in Doc 1 is flat no. 302, Rose Residency, Baner, Pune \u2013 411045"
+      ],
+      "unique_doc2": [
+        "Tenant in Doc 2 is Mr. Rahul Desai, a banker at HDFC Bank",
+        "Property address in Doc 2 is flat no. 502, Ocean Heights, Andheri West, Mumbai \u2013 400053"
+      ]
+    }
+  }
+}

@@ -21,7 +21,7 @@ S3_BUCKET: ${S3_BUCKET}
 # =====================================
 paths:
   logs_dir: logs/
-  cache_dir: cache/
+  #cache_dir: cache/
 
   # analysis directory
   analysis_dir: data/analysis
@@ -36,18 +36,18 @@ paths:
 # =====================================
 # LOGGING & MONITORING
 # =====================================
-logging:
-  level: INFO
-  format: json
-  enable_tracing: true
-  mask_sensitive: true
+# logging:
+#   level: INFO
+#   format: json
+#   enable_tracing: true
+#   mask_sensitive: true
 
 # =====================================
 # CACHE CONFIG
 # =====================================
-cache:
-  enabled: true
-  backend: sqlite   # options: sqlite, redis, memory
+# cache:
+#   enabled: true
+#   backend: sqlite   # options: sqlite, redis, memory
 
 # =====================================
 # VECTORSTORES
@@ -75,28 +75,29 @@ preprocessing:
   supported_exts:
     - ".pdf"
     - ".docx"
-    - ".ppt"
-    - ".pptx"
-    - ".md"
     - ".txt"
-    - ".csv"
-    - ".xls"
-    - ".xlsx"
-    - ".sqlite"
-    - ".db"
+    # - ".ppt"
+    # - ".pptx"
+    # - ".md"
+    # - ".csv"
+    # - ".xls"
+    # - ".xlsx"
+    # - ".sqlite"
+    # - ".db"
 
   loader_map:
     .pdf: langchain_community.document_loaders.PyPDFLoader
     .docx: langchain_community.document_loaders.Docx2txtLoader
-    .ppt: langchain_community.document_loaders.UnstructuredPowerPointLoader
-    .pptx: langchain_community.document_loaders.UnstructuredPowerPointLoader
-    .md: langchain_community.document_loaders.UnstructuredMarkdownLoader
     .txt: langchain_community.document_loaders.TextLoader
-    .csv: src.components.batch_csv_loader.BatchCSVLoader
-    .xls: langchain_community.document_loaders.UnstructuredExcelLoader
-    .xlsx: langchain_community.document_loaders.UnstructuredExcelLoader
-    .sqlite: langchain_community.document_loaders.SQLLoader
-    .db: langchain_community.document_loaders.SQLLoader
+
+    # .ppt: langchain_community.document_loaders.UnstructuredPowerPointLoader
+    # .pptx: langchain_community.document_loaders.UnstructuredPowerPointLoader
+    # .md: langchain_community.document_loaders.UnstructuredMarkdownLoader
+    # .csv: src.components.batch_csv_loader.BatchCSVLoader
+    # .xls: langchain_community.document_loaders.UnstructuredExcelLoader
+    # .xlsx: langchain_community.document_loaders.UnstructuredExcelLoader
+    # .sqlite: langchain_community.document_loaders.SQLLoader
+    # .db: langchain_community.document_loaders.SQLLoader
 
 # =====================================
 # TEXT SPLITTING CONFIGURATIONS
@@ -159,11 +160,6 @@ splitting_configs:
 #     chunk_size: 1024
 #     chunk_overlap: 30
 
-
-
-# =====================================
-# PIPELINE CHUNKING MAPPING
-# =====================================
 pipeline_chunking_map:
   document_analysis: analysis_strategy
   document_comparison: document_comparison
@@ -189,7 +185,7 @@ llm_retries:
 # MODELS
 # =====================================
 defaults:
-  llm: mistral
+  llm: openai
   embedding: huggingface
 
 models:

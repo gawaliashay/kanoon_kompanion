@@ -1,0 +1,54 @@
+[
+  {
+    "timestamp": "2025-10-22T07:20:58.637803",
+    "type": "document_upload",
+    "uploaded_files": [
+      "Sale Deed1.pdf"
+    ],
+    "message": "Documents uploaded successfully"
+  },
+  {
+    "question": "hello",
+    "answer": "Hello"
+  },
+  {
+    "question": "may i know the name of document uploaded ?",
+    "answer": "Sale Deed1.pdf"
+  },
+  {
+    "question": "who is the seller ?",
+    "answer": "The seller is Mr. Rajesh Sharma."
+  },
+  {
+    "question": "and buyer ?",
+    "answer": "Ms. Ananya Verma, daughter of Mr. Suresh Verma, residing at 45, Lajpat Nagar, New Delhi - 110024."
+  },
+  {
+    "question": "who is witnessing ?",
+    "answer": "Mr. Anil Kumar and Ms. Priya Singh are witnessing."
+  },
+  {
+    "question": "what is the type of property ?",
+    "answer": "The type of property is a residential property located at 78, Connaught Place, New Delhi."
+  },
+  {
+    "question": "what is the price of a deal ?",
+    "answer": "The price of the deal is ₹1,50,00,000."
+  },
+  {
+    "question": "negotiable ?",
+    "answer": "The price mentioned in the sale deed is not negotiable."
+  },
+  {
+    "question": "what all terms & conditions htey specified ?",
+    "answer": "The terms and conditions specified in the sale deed are:\n1. The seller confirms that the property is free from all encumbrances, mortgages, or litigation.\n2. The buyer has inspected the property and accepts it in its present condition.\n3. The ownership rights shall be transferred upon registration and full payment of the consideration."
+  },
+  {
+    "question": "og exit",
+    "answer": "I don't know."
+  },
+  {
+    "question": "exit",
+    "answer": "I don't know."
+  }
+]

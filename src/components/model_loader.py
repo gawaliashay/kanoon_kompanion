@@ -2,6 +2,7 @@
 
 import importlib
 import inspect
+import os
 from typing import Any, Dict
 from src.common.logging.logger import logger
 from src.common.exception.custom_exception import CustomException
@@ -49,6 +50,14 @@ class ModelFactory:
                             final_kwargs[pk] = kwargs[generic_key]
                             break
                     kwargs.pop(generic_key)
+
+            # Special handling for HuggingFaceEmbeddings (cloud)
+            if "HuggingFaceEmbeddings" in cls.__name__:
+                token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+                if token:
+                    if "model_kwargs" not in final_kwargs:
+                        final_kwargs["model_kwargs"] = {}
+                    final_kwargs["model_kwargs"]["use_auth_token"] = token
 
             # Merge remaining kwargs that are accepted by the constructor
             for k, v in kwargs.items():

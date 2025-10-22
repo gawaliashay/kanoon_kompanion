@@ -192,9 +192,9 @@ models:
   embeddings:
     huggingface:
       model_name: sentence-transformers/all-MiniLM-L6-v2
-      #dimensions: 384
-      import_path: langchain_huggingface.HuggingFaceEmbeddings
-      #api_key: ${HUGGINGFACEHUB_API_TOKEN}
+      dimensions: 384
+      import_path: langchain_huggingface.HuggingFaceEndpointEmbeddings
+      api_key: ${HUGGINGFACEHUB_API_TOKEN}
 
     openai:
       model_name: text-embedding-3-small

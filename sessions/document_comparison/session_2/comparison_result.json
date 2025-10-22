@@ -1,0 +1,55 @@
+{
+  "doc1_files": [
+    "Rental Agreement 1.docx"
+  ],
+  "doc2_files": [
+    "Rental Agreement 3.docx"
+  ],
+  "comparison_result": {
+    "strategy": "chunkwise",
+    "comparisons": [
+      {
+        "similarities": [
+          "Both documents are rental agreements",
+          "Both agreements have a duration of 11 months",
+          "Both agreements have witnesses"
+        ],
+        "differences": [
+          "Different locations (Pune vs Mumbai)",
+          "Different owners and tenants",
+          "Different rent amounts, maintenance fees, and security deposits",
+          "Different property addresses"
+        ],
+        "unique_doc1": [
+          "Document 1 has Mr. Rajesh Sharma as the owner and Ms. Priya Nair as the tenant",
+          "Document 1 has a rent of \u20b925,000 per month and a security deposit of \u20b975,000"
+        ],
+        "unique_doc2": [
+          "Document 2 has Mr. Ashok Gupta as the owner and Mr. Rahul Desai as the tenant",
+          "Document 2 has a rent of \u20b960,000 per month and a security deposit of \u20b92,00,000"
+        ]
+      }
+    ],
+    "summary": {
+      "similarities": [
+        "Both documents are rental agreements",
+        "Both agreements have a duration of 11 months",
+        "Both agreements have witnesses"
+      ],
+      "differences": [
+        "Different locations (Pune vs Mumbai)",
+        "Different owners and tenants",
+        "Different rent amounts, maintenance fees, and security deposits",
+        "Different property addresses"
+      ],
+      "unique_doc1": [
+        "Document 1 has Mr. Rajesh Sharma as the owner and Ms. Priya Nair as the tenant",
+        "Document 1 has a rent of \u20b925,000 per month and a security deposit of \u20b975,000"
+      ],
+      "unique_doc2": [
+        "Document 2 has Mr. Ashok Gupta as the owner and Mr. Rahul Desai as the tenant",
+        "Document 2 has a rent of \u20b960,000 per month and a security deposit of \u20b92,00,000"
+      ]
+    }
+  }
+}

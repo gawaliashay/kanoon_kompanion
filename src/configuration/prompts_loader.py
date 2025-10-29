@@ -50,7 +50,7 @@ class PromptsLoader:
         """Fetch a document comparison prompt."""
         return self._get_prompt("document_comparison", name)
     
-    def get_qa_chat_prompt(self, name: str = "context_qa_prompt") -> Dict[str, Any]:
+    def get_qa_chat_prompt(self, name: str = "answer_using_context") -> Dict[str, Any]:
         """Fetch a document QA chat prompt."""
         return self._get_prompt("document_qa_chat", name)
 

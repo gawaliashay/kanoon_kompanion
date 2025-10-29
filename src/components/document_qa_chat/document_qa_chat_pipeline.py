@@ -33,7 +33,7 @@ class DocumentQAChatPipeline:
             self.model_factory = ModelFactory()
             self.llm = llm or self.model_factory.load_llm()
 
-            # ADD THIS DEBUGGING
+            # Debugging information
             logger.info(f"Loaded LLM: {self.llm}")
             logger.info(f"LLM type: {type(self.llm)}")
             if hasattr(self.llm, 'max_tokens'):
@@ -54,25 +54,60 @@ class DocumentQAChatPipeline:
             if not self.retriever:
                 self._build_retriever()
                 
-            # Load prompts
-            self.qa_prompt = self._load_qa_prompt()
+            # Load prompts from configuration using updated names
+            self.rewrite_question_prompt = self._load_prompt("rewrite_question")
+            self.answer_using_context_prompt = self._load_prompt("answer_using_context")
             
             logger.info("DocumentQAChatPipeline initialized successfully")
             
         except Exception as e:
             raise CustomException("Failed to initialize DocumentQAChatPipeline", e)
 
-    def _load_qa_prompt(self) -> ChatPromptTemplate:
-        """Load and create a simple QA prompt."""
-        # Use a simple, reliable prompt template
-        return ChatPromptTemplate.from_template(
-            "You are a helpful assistant that answers questions based on the provided context.\n\n"
-            "Context information:\n{context}\n\n"
-            "Question: {question}\n\n"
-            "Answer the question clearly and concisely using only the context above. "
-            "If the answer is not in the context, say 'I don't know'.\n\n"
-            "Answer:"
-        )
+    def _load_prompt(self, prompt_name: str) -> ChatPromptTemplate:
+        """Load prompt from configuration and convert to ChatPromptTemplate."""
+        try:
+            prompt_config = prompts.get_qa_chat_prompt(prompt_name)
+            
+            if not prompt_config or "messages" not in prompt_config:
+                logger.warning(f"Prompt '{prompt_name}' config not found, using fallback")
+                return self._get_fallback_prompt(prompt_name)
+            
+            # Convert the YAML message format to LangChain ChatPromptTemplate
+            messages = []
+            for msg in prompt_config["messages"]:
+                if msg["role"] == "system":
+                    messages.append(("system", msg["content"]))
+                elif msg["role"] == "human":
+                    messages.append(("human", msg["content"]))
+                elif msg["role"] == "ai":
+                    messages.append(("ai", msg["content"]))
+            
+            return ChatPromptTemplate.from_messages(messages)
+            
+        except Exception as e:
+            logger.error(f"Failed to load prompt '{prompt_name}' from config: {e}")
+            return self._get_fallback_prompt(prompt_name)
+
+    def _get_fallback_prompt(self, prompt_name: str) -> ChatPromptTemplate:
+        """Fallback prompts if config loading fails."""
+        if prompt_name == "rewrite_question":
+            return ChatPromptTemplate.from_template(
+                "Given a conversation history and the most recent user query, rewrite the query as a standalone question "
+                "that makes sense without relying on the previous context. Do not provide an answer—only reformulate the "
+                "question if necessary; otherwise, return it unchanged.\n\n"
+                "Conversation History:\n{chat_history}\n\n"
+                "User Query: {question}\n\n"
+                "Standalone Question:"
+            )
+        else:  # answer_using_context
+            return ChatPromptTemplate.from_template(
+                "You are an assistant designed to answer questions using the provided context. Rely only on the retrieved "
+                "information to form your response. If the answer is not found in the context, respond with 'I don't know.' "
+                "Keep your answer concise and no longer than three sentences.\n\n"
+                "Context:\n{context}\n\n"
+                "Question: {question}\n\n"
+                "Answer:"
+            )
 
     def _build_retriever(self):
         """Build retriever from documents in QA chat directory."""
@@ -112,9 +147,37 @@ class DocumentQAChatPipeline:
         
         return "\n\n".join(formatted) if formatted else "No relevant information found."
 
-    def query(self, question: str, history: str = "") -> Dict[str, Any]:
+    def _rewrite_question(self, question: str, chat_history: str = "") -> str:
+        """Make question standalone using conversation history."""
+        try:
+            if not chat_history.strip():
+                return question
+                
+            # Prepare inputs for the rewrite prompt
+            rewrite_inputs = {
+                "input": f"Conversation History:\n{chat_history}\n\nUser Query: {question}"
+            }
+            
+            rewrite_chain = self.rewrite_question_prompt | self.llm | StrOutputParser()
+            standalone_question = rewrite_chain.invoke(rewrite_inputs)
+            
+            logger.debug(f"Rewritten question: '{question}' -> '{standalone_question}'")
+            return standalone_question.strip()
+            
+        except Exception as e:
+            logger.warning(f"Failed to rewrite question, using original: {e}")
+            return question
+
+    def query(self, question: str, chat_history: str = "") -> Dict[str, Any]:
         """
-        Query the document QA chatbot.
+        Query the document QA chatbot with conversation history support.
+        
+        Args:
+            question: The user's question
+            chat_history: Previous conversation history as a string
+            
+        Returns:
+            Dictionary containing answer, metadata, and success status
         """
         try:
             if not question.strip():
@@ -123,41 +186,39 @@ class DocumentQAChatPipeline:
                     "success": False
                 }
             
-            # Get relevant documents
-            retrieved_docs = self.retriever.invoke(question)  # Use invoke instead of deprecated method
+            # Rewrite question if there's chat history
+            standalone_question = self._rewrite_question(question, chat_history)
             
-            # Format context
-            context = self._safe_format_docs(retrieved_docs)
+            # Get relevant documents using the standalone question
+            retrieved_docs = self.retriever.invoke(standalone_question)
             
-            # Create the QA chain with proper input formatting
-            qa_chain = (
-                {
-                    "context": lambda x: x["context"],
-                    "question": lambda x: x["question"]
-                }
-                | self.qa_prompt
-                | self.llm
-                | StrOutputParser()
-            )
+            # Format context for the answer prompt
+            context_text = self._safe_format_docs(retrieved_docs)
             
-            # Invoke the chain with proper inputs
-            answer = qa_chain.invoke({
-                "context": context,
-                "question": question
-            })
+            # Prepare inputs for the answer prompt
+            answer_inputs = {
+                "context": context_text,
+                "input": standalone_question
+            }
             
-            logger.info(f"QA query processed: '{question}'")
+            # Create and invoke the answer chain
+            answer_chain = self.answer_using_context_prompt | self.llm | StrOutputParser()
+            answer = answer_chain.invoke(answer_inputs)
+            
+            logger.info(f"QA query processed: '{question}' -> '{standalone_question}'")
             return {
                 "answer": answer.strip(),
                 "question": question,
+                "standalone_question": standalone_question,
                 "success": True,
-                "retrieved_docs_count": len(retrieved_docs)
+                "retrieved_docs_count": len(retrieved_docs),
+                "has_context": len(retrieved_docs) > 0
             }
             
         except Exception as e:
-            logger.error(f"Failed to process query: {question} - {e}")
+            logger.error(f"Failed to process query: '{question}' - {e}")
             return {
-                "answer": f"Sorry, I encountered an error processing your question.",
+                "answer": "Sorry, I encountered an error processing your question. Please try again.",
                 "question": question,
                 "success": False,
                 "error": str(e)
@@ -178,6 +239,14 @@ class DocumentQAChatPipeline:
             
         except Exception as e:
             raise CustomException("Failed to ingest new documents", e)
+
+    def get_prompt_info(self) -> Dict[str, Any]:
+        """Get information about the loaded prompts for debugging."""
+        return {
+            "rewrite_question_prompt": str(self.rewrite_question_prompt),
+            "answer_using_context_prompt": str(self.answer_using_context_prompt),
+            "llm_type": type(self.llm).__name__
+        }
 
 
 def create_document_qa_chat_pipeline(

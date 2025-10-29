@@ -88,7 +88,7 @@ document_comparison:
 # DOCUMENT QA CHAT PROMPTS
 # =====================================
 document_qa_chat:
-  contextualize_question_prompt:
+  rewrite_question:
     messages:
       - role: system
         content: |
@@ -98,7 +98,7 @@ document_qa_chat:
       - role: human
         content: "{input}"
 
-  context_qa_prompt:
+  answer_using_context:
     messages:
       - role: system
         content: |

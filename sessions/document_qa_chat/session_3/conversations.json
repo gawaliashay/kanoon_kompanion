@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "2025-10-29T18:26:46.838672",
+    "type": "document_upload",
+    "uploaded_files": [
+      "Rental Agreement 2.docx"
+    ],
+    "message": "Documents uploaded successfully"
+  },
+  {
+    "question": "may i know the name of document ?",
+    "answer": "The document is a rental agreement."
+  },
+  {
+    "question": "file name",
+    "answer": "I don't know."
+  },
+  {
+    "question": "uploaded file name",
+    "answer": "I don't know."
+  },
+  {
+    "question": "what are the the terms and conditions ?",
+    "answer": "The terms and conditions of the rental agreement include a monthly rent of ₹45,000, maintenance fee of ₹3,500, security deposit of ₹1,50,000, and a duration of 12 months from 15/02/2025 to 14/02/2026."
+  },
+  {
+    "question": "who are the tenents",
+    "answer": "The tenant is Mr. Arvind Menon, an MBA student at IIM Bangalore, with a permanent address in Trivandrum, Kerala, according to Rental Agreement 2."
+  },
+  {
+    "question": "and owner ?",
+    "answer": "The owner of the property mentioned in Rental Agreement 2 is Mrs. Kavita Rao, who is the wife of Mr. Suresh Rao."
+  }
+]
